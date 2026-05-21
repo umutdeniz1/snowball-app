@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snowball – Musikmarknadsplatsen</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --brand: #6c47ff; --brand-dim: #ede9ff; --brand-dark: #4f2fe6;
+    --green: #16a34a; --green-bg: #f0fdf4;
+    --yellow: #d97706; --yellow-bg: #fffbeb;
+    --red: #dc2626; --red-bg: #fef2f2;
+    --bg: #f4f5f7; --surface: #ffffff; --border: #e2e4e9;
+    --text: #111827; --sub: #6b7280; --sub2: #9ca3af;
+    --sidebar-w: 220px; --header-h: 56px;
+  }
+  html { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+  body { background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+
+  /* LANDING */
+  #page-landing { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0c0c14; padding: 40px 20px; }
+  .landing-inner { max-width: 440px; width: 100%; text-align: center; }
+  .landing-logo-mark { font-size: 34px; font-weight: 900; color: #fff; letter-spacing: -1px; margin-bottom: 6px; }
+  .landing-logo-mark span { color: var(--brand); }
+  .landing-tagline { font-size: 14px; color: rgba(255,255,255,0.4); margin-bottom: 40px; }
+  .landing-roles { display: flex; gap: 12px; margin-bottom: 24px; }
+  .role-btn { flex: 1; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 18px 14px; cursor: pointer; transition: all 0.15s; text-align: center; }
+  .role-btn:hover { border-color: rgba(108,71,255,0.5); background: rgba(108,71,255,0.08); }
+  .role-btn.active { border-color: var(--brand); background: rgba(108,71,255,0.12); }
+  .role-btn .icon { font-size: 22px; margin-bottom: 6px; }
+  .role-btn .label { font-size: 14px; font-weight: 700; color: #fff; }
+  .role-btn .desc { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 3px; line-height: 1.4; }
+  .landing-form { text-align: left; margin-bottom: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .landing-input { width: 100%; background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 14px; font-size: 14px; color: white; outline: none; font-family: inherit; transition: border-color 0.15s; }
+  .landing-input::placeholder { color: rgba(255,255,255,0.3); }
+  .landing-input:focus { border-color: var(--brand); background: rgba(108,71,255,0.1); }
+  .btn-enter { width: 100%; background: var(--brand); color: white; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
+  .btn-enter:hover { background: var(--brand-dark); }
+  .btn-enter:disabled { opacity: 0.5; cursor: not-allowed; }
+  .landing-back { margin-top: 12px; font-size: 12px; color: rgba(255,255,255,0.3); cursor: pointer; }
+  .landing-back:hover { color: rgba(255,255,255,0.6); }
+  .admin-dot { margin-top: 28px; font-size: 11px; color: rgba(255,255,255,0.08); cursor: pointer; user-select: none; }
+
+  /* APP SHELL */
+  #app { display: none; }
+  .app-layout { display: flex; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar { width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 50; }
+  .sidebar-head { height: var(--header-h); display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .sidebar-logo { font-size: 16px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+  .sidebar-logo em { color: var(--brand); font-style: normal; }
+  .sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 0; }
+  .nav-section { font-size: 11px; font-weight: 600; color: var(--sub2); text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 20px 4px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 20px; font-size: 13px; font-weight: 500; color: var(--sub); cursor: pointer; transition: all 0.12s; position: relative; }
+  .nav-item:hover { color: var(--text); background: var(--bg); }
+  .nav-item.active { color: var(--brand); background: var(--brand-dim); font-weight: 600; }
+  .nav-item.active::before { content: ''; position: absolute; left: 0; top: 4px; bottom: 4px; width: 3px; background: var(--brand); border-radius: 0 3px 3px 0; }
+  .nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+  .nav-badge { margin-left: auto; background: #ef4444; color: white; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
+  .sidebar-foot { border-top: 1px solid var(--border); padding: 14px 20px; flex-shrink: 0; }
+  .foot-user { display: flex; align-items: center; gap: 10px; }
+  .foot-avatar { width: 30px; height: 30px; border-radius: 7px; background: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .foot-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .foot-role { font-size: 11px; color: var(--sub2); }
+  .foot-logout { margin-left: auto; font-size: 12px; color: var(--sub2); cursor: pointer; }
+  .foot-logout:hover { color: var(--red); }
+
+  /* MAIN */
+  .main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .page-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 32px; height: var(--header-h); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 40; flex-shrink: 0; }
+  .page-title { font-size: 15px; font-weight: 700; color: var(--text); }
+  .page-sub { font-size: 13px; color: var(--sub); margin-left: 10px; }
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+  .content { padding: 28px 32px; flex: 1; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.12s; white-space: nowrap; font-family: inherit; }
+  .btn-primary { background: var(--brand); color: white; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: #eaedf1; }
+  .btn-danger { background: transparent; color: var(--red); border: 1.5px solid #fca5a5; }
+  .btn-danger:hover { background: var(--red-bg); }
+  .btn-success { background: #16a34a; color: white; }
+  .btn-success:hover { background: #15803d; }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+  .badge-active { background: var(--green-bg); color: var(--green); }
+  .badge-pending { background: var(--yellow-bg); color: var(--yellow); }
+  .badge-done { background: var(--brand-dim); color: var(--brand); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+
+  /* STATS */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+  .stat-label { font-size: 11px; font-weight: 600; color: var(--sub); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .stat-val { font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+  .stat-hint { font-size: 12px; color: var(--sub); margin-top: 4px; }
+  .stat-hint.up { color: var(--green); }
+  .stat-hint.warn { color: var(--yellow); }
+
+  /* CARD */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; margin-bottom: 20px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-title { font-size: 13.5px; font-weight: 700; color: var(--text); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { font-size: 11px; font-weight: 700; color: var(--sub); text-transform: uppercase; letter-spacing: 0.06em; padding: 0 16px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  tbody td { padding: 12px 16px; font-size: 13.5px; border-bottom: 1px solid var(--border); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--bg); }
+  .td-bold { font-weight: 600; color: var(--text); }
+  .td-muted { color: var(--sub); }
+  .td-money { font-weight: 700; color: var(--green); }
+
+  /* DEALS */
+  .deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px; }
+  .deal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; cursor: pointer; transition: all 0.15s; }
+  .deal-card:hover { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-dim); }
+  .deal-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .deal-artist { font-size: 14px; font-weight: 700; }
+  .deal-song { font-size: 12px; color: var(--sub); margin-top: 1px; }
+  .deal-rate { font-size: 20px; font-weight: 800; color: var(--brand); margin-bottom: 2px; }
+  .deal-rate-sub { font-size: 12px; color: var(--sub); margin-bottom: 12px; }
+  .progress-track { background: var(--border); border-radius: 4px; height: 5px; margin-bottom: 8px; }
+  .progress-fill { height: 5px; border-radius: 4px; background: var(--brand); transition: width 0.3s; }
+  .deal-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--sub); margin-bottom: 10px; }
+  .deal-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag { font-size: 11px; font-weight: 600; color: var(--sub); background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 2px 7px; }
+
+  /* FORM */
+  .form-group { margin-bottom: 14px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 5px; color: var(--text); }
+  .form-input, .form-select { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 12px; font-size: 13.5px; color: var(--text); outline: none; transition: border-color 0.15s; font-family: inherit; }
+  .form-input:focus, .form-select:focus { border-color: var(--brand); background: #fff; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* CHAT */
+  .chat-layout { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 112px); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); overflow: hidden; }
+  .chat-list { border-right: 1px solid var(--border); overflow-y: auto; }
+  .chat-list-header { padding: 13px 16px; font-size: 13px; font-weight: 700; border-bottom: 1px solid var(--border); }
+  .chat-thread { display: flex; gap: 10px; padding: 11px 14px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  .chat-thread:hover { background: var(--bg); }
+  .chat-thread.active { background: var(--brand-dim); }
+  .thread-avatar { width: 34px; height: 34px; border-radius: 8px; background: #1a1a2e; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .thread-name { font-size: 13px; font-weight: 600; }
+  .thread-preview { font-size: 12px; color: var(--sub); margin-top: 1px; }
+  .thread-time { font-size: 11px; color: var(--sub2); margin-left: auto; flex-shrink: 0; }
+  .thread-dot { width: 7px; height: 7px; background: var(--brand); border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .chat-main { display: flex; flex-direction: column; }
+  .chat-head { padding: 13px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .chat-head-name { font-size: 13.5px; font-weight: 700; }
+  .online-dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; margin-left: auto; }
+  .chat-msgs { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--bg); }
+  .msg-bubble { max-width: 68%; }
+  .bubble-text { padding: 9px 13px; border-radius: 11px; font-size: 13.5px; line-height: 1.5; }
+  .msg-bubble.them .bubble-text { background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 3px; }
+  .msg-bubble.me { align-self: flex-end; }
+  .msg-bubble.me .bubble-text { background: var(--brand); color: white; border-bottom-right-radius: 3px; }
+  .bubble-time { font-size: 11px; color: var(--sub2); margin-top: 3px; padding: 0 2px; }
+  .msg-bubble.me .bubble-time { text-align: right; }
+  .chat-system { text-align: center; }
+  .chat-system span { display: inline-block; background: var(--surface); border: 1px solid var(--border); color: var(--sub); font-size: 11px; font-weight: 600; padding: 3px 12px; border-radius: 20px; }
+  .chat-input-row { padding: 13px 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; }
+  .chat-send { background: var(--brand); color: white; border: none; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+  /* PROPOSAL */
+  .proposal-bubble { background: var(--surface); border: 2px solid var(--brand); border-radius: 12px; padding: 14px; }
+  .proposal-label { font-size: 10px; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .proposal-amount { font-size: 24px; font-weight: 800; color: var(--brand); line-height: 1.1; }
+  .proposal-desc { font-size: 12px; color: var(--sub); margin-bottom: 10px; }
+  .proposal-actions { display: flex; gap: 8px; }
+
+  /* MILESTONES */
+  .ms-row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+  .ms-row:last-child { border-bottom: none; }
+  .ms-circle { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; cursor: pointer; transition: all 0.15s; }
+  .ms-circle.done { background: var(--green); border-color: var(--green); color: white; }
+  .ms-circle.waiting { background: var(--yellow-bg); border-color: var(--yellow); color: var(--yellow); font-size: 10px; }
+  .ms-title { font-size: 13.5px; font-weight: 600; }
+  .ms-desc { font-size: 12px; color: var(--sub); margin-top: 1px; }
+  .ms-amount { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--green); white-space: nowrap; }
+  .ms-amount.locked { color: var(--sub2); font-weight: 500; }
+
+  /* PROFILE HERO */
+  .profile-hero { background: linear-gradient(120deg, #0c0c14, #1a0a3a); border-radius: 12px; padding: 26px 28px; color: white; display: flex; align-items: center; gap: 22px; margin-bottom: 20px; }
+  .profile-pic { width: 64px; height: 64px; border-radius: 12px; background: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; }
+  .profile-name { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .profile-handle { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .profile-stats-row { display: flex; gap: 24px; margin-top: 12px; }
+  .ps-val { font-size: 18px; font-weight: 800; }
+  .ps-lbl { font-size: 11px; color: rgba(255,255,255,0.45); }
+
+  /* BALANCE */
+  .balance-widget { background: linear-gradient(135deg, #111827, #1a0a3a); border-radius: 10px; padding: 18px 20px; color: white; }
+  .balance-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px; }
+  .balance-amount { font-size: 30px; font-weight: 900; letter-spacing: -1px; }
+  .balance-sub { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 4px; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--surface); border-radius: 14px; padding: 26px; width: 490px; max-width: 94vw; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+  .modal-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .modal-title { font-size: 16px; font-weight: 800; }
+  .modal-close { background: none; border: none; font-size: 18px; color: var(--sub); cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .modal-close:hover { background: var(--bg); }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 22px; right: 22px; background: #111827; color: white; padding: 11px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 9999; opacity: 0; transform: translateY(8px); transition: all 0.25s; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* MISC */
+  .alert { border-radius: 8px; padding: 11px 13px; font-size: 13px; margin-bottom: 14px; }
+  .alert-yellow { background: var(--yellow-bg); color: var(--yellow); border: 1px solid #fde68a; }
+  .alert-green { background: var(--green-bg); color: var(--green); border: 1px solid #86efac; }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  .empty-state { text-align: center; padding: 52px 20px; }
+  .empty-state .es-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-state .es-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .empty-state .es-sub { font-size: 13px; color: var(--sub); }
+  .shortcut-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .shortcut { background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 12px; font-weight: 600; color: var(--sub); cursor: pointer; transition: all 0.12s; }
+  .shortcut:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-dim); }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL: NY KAMPANJ -->
+<div class="modal-overlay" id="modal-campaign">
+  <div class="modal-box">
+    <div class="modal-top">
+      <div class="modal-title">Ny kampanj</div>
+      <button class="modal-close" onclick="closeModal('modal-campaign')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Artistnamn</label><input class="form-input" id="camp-artist" placeholder="t.ex. Marcus B." /></div>
+      <div class="form-group"><label class="form-label">Låttitel</label><input class="form-input" id="camp-song" placeholder="t.ex. Flashback" /></div>
+    </div>
+    <div class="form-group"><label class="form-label">TikTok-länk till ljudet</label><input class="form-input" id="camp-tiktok" placeholder="https://tiktok.com/music/..." /></div>
+    <div class="form-group"><label class="form-label">Genre / stil (valfritt)</label><input class="form-input" id="camp-genre" placeholder="t.ex. Pop / R&B" /></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Total budget (kr)</label><input class="form-input" id="camp-budget" type="number" value="10000" /></div>
+      <div class="form-group"><label class="form-label">kr per 1 000 visningar</label><input class="form-input" id="camp-rate" type="number" value="10" /></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Max per kreatör (kr)</label><input class="form-input" id="camp-max" type="number" value="1000" /></div>
+      <div class="form-group"><label class="form-label">Kampanjlängd</label><select class="form-select" id="camp-length"><option>30 dagar</option><option>60 dagar</option><option>90 dagar</option></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Krav på videon (en per rad, valfritt)</label><textarea class="form-input" id="camp-req" rows="3" placeholder="Använd originalljudet&#10;Videon ska vara 15–60 sek&#10;Dance eller lifestyle-tema" style="resize:vertical;"></textarea></div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('modal-campaign')">Avbryt</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="createCampaign()">Publicera kampanj</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SKICKA IN MILESTONE -->
+<div class="modal-overlay" id="modal-milestone">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-top">
+      <div class="modal-title">Bocka in visningar</div>
+      <button class="modal-close" onclick="closeModal('modal-milestone')">✕</button>
+    </div>
+    <div id="ms-modal-info" style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--sub);"></div>
+    <div class="form-group">
+      <label class="form-label">TikTok-länk till din video</label>
+      <input class="form-input" id="ms-link" placeholder="https://tiktok.com/@ditt-handle/video/..." />
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('modal-milestone')">Avbryt</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="submitMilestone()">Skicka in →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ LANDING ═══ -->
+<div id="page-landing">
+  <div class="landing-inner">
+    <div class="landing-logo-mark">❄️ <span>Snowball</span></div>
+    <div class="landing-tagline">Musikmarknadsplatsen för TikTok-kreatörer.</div>
+
+    <!-- Rollval -->
+    <div id="role-section">
+      <div class="landing-roles">
+        <div class="role-btn" id="card-creator" onclick="selectRole('creator')">
+          <div class="icon">📱</div>
+          <div class="label">Kreatör</div>
+          <div class="desc">Skapar videos och tjänar på visningar</div>
+        </div>
+        <div class="role-btn" id="card-editor" onclick="selectRole('editor')">
+          <div class="icon">🎬</div>
+          <div class="label">Editor</div>
+          <div class="desc">Redigerar videos åt kreatörer</div>
+        </div>
+      </div>
+      <button class="btn-enter" id="enter-btn" disabled onclick="showRegForm()">Kom igång →</button>
+    </div>
+
+    <!-- Registreringsformulär -->
+    <div id="reg-section" style="display:none;">
+      <div class="landing-form">
+        <input class="landing-input" id="reg-name" placeholder="Ditt namn" />
+        <input class="landing-input" id="reg-email" type="email" placeholder="E-post" />
+        <input class="landing-input" id="reg-tiktok" placeholder="TikTok @handle (valfritt)" />
+      </div>
+      <button class="btn-enter" id="reg-btn" onclick="loginOrRegister()">Kom igång →</button>
+      <div class="landing-back" onclick="backToRoles()">← Tillbaka</div>
+    </div>
+
+    <!-- Admin-inloggning -->
+    <div id="admin-section" style="display:none;">
+      <div class="landing-form">
+        <input class="landing-input" id="admin-pw" type="password" placeholder="Adminlösenord" onkeypress="if(event.key==='Enter')loginAdmin()" />
+      </div>
+      <button class="btn-enter" onclick="loginAdmin()">Logga in som admin</button>
+      <div class="landing-back" onclick="backToRoles()">← Tillbaka</div>
+    </div>
+
+    <div class="admin-dot" id="admin-dot" onclick="showAdminLogin()">·</div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+      <div class="sidebar-head">
+        <div class="sidebar-logo">❄️&thinsp;<em>Snow</em>ball</div>
+      </div>
+      <div class="sidebar-nav">
+        <div id="nav-creator" style="display:none">
+          <div class="nav-section">Meny</div>
+          <div class="nav-item" onclick="showPage('home')"><span class="nav-icon">⊞</span>Översikt</div>
+          <div class="nav-item" onclick="showPage('deals')"><span class="nav-icon">🔥</span>Deals</div>
+          <div class="nav-item" onclick="showPage('inbox')"><span class="nav-icon">💬</span>Meddelanden</div>
+          <div class="nav-item" onclick="showPage('milestones')"><span class="nav-icon">📊</span>Visningar</div>
+          <div class="nav-section" style="margin-top:6px;">Konto</div>
+          <div class="nav-item" onclick="showPage('income')"><span class="nav-icon">💰</span>Intäkter</div>
+          <div class="nav-item" onclick="showPage('profile')"><span class="nav-icon">👤</span>Min profil</div>
+        </div>
+        <div id="nav-admin" style="display:none">
+          <div class="nav-section">Snowball Team</div>
+          <div class="nav-item" onclick="showPage('admin-home')"><span class="nav-icon">⊞</span>Översikt</div>
+          <div class="nav-item" onclick="openModal('modal-campaign')"><span class="nav-icon">＋</span>Ny kampanj</div>
+          <div class="nav-item" onclick="showPage('admin-verify')"><span class="nav-icon">🔍</span>Granska<span class="nav-badge" id="verify-badge" style="display:none">0</span></div>
+          <div class="nav-item" onclick="showPage('admin-creators')"><span class="nav-icon">👥</span>Kreatörer</div>
+          <div class="nav-item" onclick="showPage('admin-payouts')"><span class="nav-icon">💸</span>Utbetalningar</div>
+        </div>
+      </div>
+      <div class="sidebar-foot">
+        <div class="foot-user">
+          <div class="foot-avatar" id="user-avatar">👤</div>
+          <div>
+            <div class="foot-name" id="user-name">–</div>
+            <div class="foot-role" id="user-role">–</div>
+          </div>
+          <div class="foot-logout" onclick="location.reload()" title="Logga ut">↩</div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="main">
+
+      <!-- ══ CREATOR: ÖVERSIKT ══ -->
+      <div class="page active" id="page-home">
+        <div class="page-header">
+          <span class="page-title" id="home-greeting">Hej 👋</span>
+          <div class="header-actions"><button class="btn btn-primary" onclick="showPage('deals')">Hitta deals</button></div>
+        </div>
+        <div class="content">
+          <div class="stats-row">
+            <div class="stat-card"><div class="stat-label">Tillgängligt saldo</div><div class="stat-val" id="h-balance">0 kr</div></div>
+            <div class="stat-card"><div class="stat-label">Aktiva kampanjer</div><div class="stat-val" id="h-deals">0</div></div>
+            <div class="stat-card"><div class="stat-label">Visningar denna månad</div><div class="stat-val" id="h-views">–</div></div>
+            <div class="stat-card"><div class="stat-label">Totalt intjänat</div><div class="stat-val" id="h-earned">0 kr</div></div>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header"><div class="card-title">Mina kampanjer</div><button class="btn btn-secondary btn-sm" onclick="showPage('deals')">+ Hitta fler</button></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Kampanj</th><th>Status</th><th></th></tr></thead>
+                  <tbody id="home-campaigns"><tr><td colspan="3" class="td-muted" style="padding:20px;text-align:center;">Laddar...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><div class="card-title">Saldo & uttag</div><button class="btn btn-success btn-sm" onclick="showPage('bank')">Ta ut pengar</button></div>
+              <div class="balance-widget" style="margin-bottom:14px;">
+                <div class="balance-label">Tillgängligt att ta ut</div>
+                <div class="balance-amount" id="h-balance2">0 kr</div>
+                <div class="balance-sub">Godkänt av Snowball</div>
+              </div>
+              <div style="font-size:12px;color:var(--sub);margin-bottom:8px;">Senaste</div>
+              <div id="home-transactions" style="font-size:13px;color:var(--sub);">–</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CREATOR: DEALS ══ -->
+      <div class="page" id="page-deals">
+        <div class="page-header">
+          <span class="page-title">Deals</span>
+          <div class="header-actions"><input class="form-input" id="deals-search" placeholder="Sök..." style="width:180px;" oninput="filterDeals()" /></div>
+        </div>
+        <div class="content">
+          <p style="font-size:13px;color:var(--sub);margin-bottom:20px;">Artister betalar per 1 000 visningar — du postar och tjänar.</p>
+          <div class="deals-grid" id="deals-grid">
+            <div class="empty-state" style="grid-column:1/-1;"><div class="es-icon">⏳</div><div class="es-title">Laddar kampanjer...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ DEAL DETAIL ══ -->
+      <div class="page" id="page-deal-detail">
+        <div class="page-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="btn btn-secondary btn-sm" onclick="showPage('deals')">← Tillbaka</button>
+            <span class="page-title" id="detail-title">–</span>
+            <span class="page-sub" id="detail-sub"></span>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-primary" onclick="applyToCampaign()">Jag är intresserad</button>
+          </div>
+        </div>
+        <div class="content">
+          <div class="grid-2">
+            <div>
+              <div class="card">
+                <div id="detail-tiktok-btn" onclick="openTiktokSound()" style="display:flex;align-items:center;gap:12px;background:#111827;border-radius:8px;padding:13px;cursor:pointer;margin-bottom:18px;">
+                  <div style="width:34px;height:34px;background:var(--brand);border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:13px;flex-shrink:0;">▶</div>
+                  <div><div style="font-weight:600;color:white;font-size:13.5px;">Lyssna på ljudet</div><div style="font-size:12px;color:#6b7280;">Öppna på TikTok</div></div>
+                </div>
+                <div class="card-header" style="margin-bottom:10px;"><div class="card-title">Utbetalning per nivå</div></div>
+                <table>
+                  <tbody>
+                    <tr><td class="td-muted">10 000 visningar</td><td class="td-money" style="text-align:right;" id="detail-rate-10k">–</td></tr>
+                    <tr><td class="td-muted">Max per video</td><td class="td-money" style="text-align:right;" id="detail-max">–</td></tr>
+                    <tr><td class="td-muted">Max visningar som räknas</td><td class="td-money" style="text-align:right;" id="detail-max-views">–</td></tr>
+                  </tbody>
+                </table>
+                <div class="alert alert-yellow" style="margin-top:14px;margin-bottom:0;">💸 Utbetalning sker 7 dagar efter att Snowball verifierat din video.</div>
+              </div>
+            </div>
+            <div>
+              <div class="card">
+                <div class="card-header" style="margin-bottom:14px;"><div class="card-title">Kampanjinfo</div></div>
+                <div style="background:var(--bg);border-radius:8px;padding:14px;margin-bottom:16px;">
+                  <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span style="color:var(--sub);">Budget kvar</span><span style="font-weight:700;" id="detail-budget-text">–</span></div>
+                  <div class="progress-track"><div class="progress-fill" id="detail-budget-bar" style="width:0%;"></div></div>
+                </div>
+                <div class="card-title" style="margin-bottom:10px;font-size:13px;">Krav på videon</div>
+                <div id="detail-requirements" style="display:flex;flex-direction:column;gap:7px;font-size:13px;color:var(--sub);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CREATOR: MEDDELANDEN ══ -->
+      <div class="page" id="page-inbox">
+        <div class="page-header"><span class="page-title">Meddelanden</span></div>
+        <div class="content">
+          <div class="chat-layout">
+            <div class="chat-list">
+              <div class="chat-list-header">Konversationer</div>
+              <div class="chat-thread active">
+                <div class="thread-avatar">❄️</div>
+                <div style="flex:1;min-width:0;">
+                  <div class="thread-name" style="color:var(--brand);">Snowball Team</div>
+                  <div class="thread-preview">Direktkontakt med Snowball</div>
+                </div>
+                <div class="thread-dot"></div>
+              </div>
+            </div>
+            <div class="chat-main">
+              <div class="chat-head">
+                <div class="thread-avatar">❄️</div>
+                <div><div class="chat-head-name">Snowball Team</div><div style="font-size:11px;color:var(--sub);">Svarar normalt inom 24h</div></div>
+                <div class="online-dot"></div>
+              </div>
+              <div class="chat-msgs" id="chat-msgs">
+                <div class="chat-system"><span>Välkommen! Snowball Team kontaktar dig här ❄️</span></div>
+              </div>
+              <div class="chat-input-row">
+                <input class="form-input" placeholder="Skriv ett meddelande..." id="chat-in" onkeypress="if(event.key==='Enter')sendCreatorMsg()" />
+                <button class="chat-send" onclick="sendCreatorMsg()">Skicka</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CREATOR: VISNINGAR ══ -->
+      <div class="page" id="page-milestones">
+        <div class="page-header"><span class="page-title">Bocka in visningar</span></div>
+        <div class="content" style="max-width:620px;">
+          <div id="milestones-container">
+            <div class="empty-state"><div class="es-icon">📊</div><div class="es-title">Laddar dina kampanjer...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CREATOR: PROFIL ══ -->
+      <div class="page" id="page-profile">
+        <div class="page-header">
+          <span class="page-title">Min profil</span>
+          <div class="header-actions"><button class="btn btn-secondary btn-sm" onclick="showToast('✏️ Redigera profil — kommer snart')">Redigera profil</button></div>
+        </div>
+        <div class="content">
+          <div class="profile-hero">
+            <div class="profile-pic" id="profile-pic">👤</div>
+            <div>
+              <div class="profile-name" id="profile-name">–</div>
+              <div class="profile-handle" id="profile-handle">–</div>
+              <div class="profile-stats-row">
+                <div><div class="ps-val" id="profile-deals">–</div><div class="ps-lbl">Aktiva deals</div></div>
+                <div><div class="ps-val" id="profile-price">300 kr</div><div class="ps-lbl">Music ad-pris</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header"><div class="card-title">Konto</div></div>
+              <div style="display:flex;flex-direction:column;">
+                <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;cursor:pointer;font-size:13.5px;" onclick="showPage('income')"><span>Betalning & uttag</span><span style="color:var(--sub);">→</span></div>
+                <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;cursor:pointer;font-size:13.5px;" onclick="showToast('🔔 Notifikationer — kommer snart')"><span>Notifikationer</span><span style="color:var(--sub);">→</span></div>
+                <div style="padding:12px 0;display:flex;justify-content:space-between;cursor:pointer;font-size:13.5px;color:var(--red);" onclick="location.reload()"><span>Logga ut</span><span>→</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CREATOR: INTÄKTER ══ -->
+      <div class="page" id="page-income">
+        <div class="page-header">
+          <span class="page-title">Intäkter</span>
+          <div class="header-actions"><button class="btn btn-success" onclick="showPage('bank')">Ta ut pengar →</button></div>
+        </div>
+        <div class="content">
+          <div class="stats-row">
+            <div class="stat-card"><div class="stat-label">Tillgängligt saldo</div><div class="stat-val">0 kr</div><div class="stat-hint up">Redo att ta ut</div></div>
+            <div class="stat-card"><div class="stat-label">Väntar verifiering</div><div class="stat-val">0 kr</div></div>
+            <div class="stat-card"><div class="stat-label">Totalt intjänat</div><div class="stat-val">0 kr</div></div>
+            <div class="stat-card"><div class="stat-label">Antal uppdrag</div><div class="stat-val" id="income-deals">0 st</div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Transaktioner</div></div>
+            <div id="income-table">
+              <div class="empty-state"><div class="es-icon">💰</div><div class="es-title">Inga transaktioner ännu</div><div class="es-sub">Godkända milstolpar visas här.</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CREATOR: TA UT ══ -->
+      <div class="page" id="page-bank">
+        <div class="page-header">
+          <div><span class="page-title">Ta ut pengar</span></div>
+          <div class="header-actions"><button class="btn btn-secondary btn-sm" onclick="showPage('income')">← Tillbaka</button></div>
+        </div>
+        <div class="content" style="max-width:460px;">
+          <div class="card">
+            <div class="balance-widget" style="margin-bottom:18px;text-align:center;">
+              <div class="balance-label">Tillgängligt att ta ut</div>
+              <div class="balance-amount">0 kr</div>
+            </div>
+            <div class="form-group"><label class="form-label">Bank</label><input class="form-input" placeholder="t.ex. Swedbank, SEB, Nordea..." /></div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Clearingnummer</label><input class="form-input" type="number" placeholder="4 siffror" /></div>
+              <div class="form-group"><label class="form-label">Kontonummer</label><input class="form-input" type="number" placeholder="7–10 siffror" /></div>
+            </div>
+            <div class="form-group"><label class="form-label">Namn på kontot</label><input class="form-input" id="bank-name" /></div>
+            <div class="alert alert-yellow">💸 Utbetalning sker inom 7 dagar. Minsta belopp: 100 kr.</div>
+            <button class="btn btn-success" style="width:100%;" onclick="showToast('🏦 Bankkonto sparat! Snowball kontaktar dig.')">Spara & begär uttag</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ADMIN: ÖVERSIKT ══ -->
+      <div class="page" id="page-admin-home">
+        <div class="page-header">
+          <span class="page-title">Admin-panel · Snowball Team</span>
+          <div class="header-actions"><button class="btn btn-primary" onclick="openModal('modal-campaign')">+ Ny kampanj</button></div>
+        </div>
+        <div class="content">
+          <div class="stats-row">
+            <div class="stat-card"><div class="stat-label">Aktiva kampanjer</div><div class="stat-val" id="admin-stat-campaigns">–</div></div>
+            <div class="stat-card"><div class="stat-label">Registrerade kreatörer</div><div class="stat-val" id="admin-stat-creators">–</div></div>
+            <div class="stat-card"><div class="stat-label">Väntar granskning</div><div class="stat-val warn" id="admin-stat-pending" style="color:var(--yellow);">–</div></div>
+            <div class="stat-card"><div class="stat-label">Snowball cut (10%)</div><div class="stat-val" id="admin-stat-cut" style="color:var(--green);">0 kr</div></div>
+          </div>
+          <div class="grid-2">
+            <div class="card">
+              <div class="card-header"><div class="card-title">Kampanjer</div></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Artist</th><th>Låt</th><th>Budget kvar</th><th>Status</th><th></th></tr></thead>
+                  <tbody id="admin-campaigns-tbody"><tr><td colspan="4" class="td-muted" style="padding:20px;text-align:center;">Laddar...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><div class="card-title">Väntar granskning</div></div>
+              <div id="admin-pending-list"><div class="empty-state" style="padding:30px;"><div class="es-icon">✅</div><div class="es-title" style="font-size:13px;">Allt granskat</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ADMIN: KREATÖRER ══ -->
+      <div class="page" id="page-admin-creators">
+        <div class="page-header">
+          <span class="page-title">Kreatörer</span>
+          <div class="header-actions"><input class="form-input" placeholder="Sök..." style="width:180px;" oninput="filterCreators(this.value)" /></div>
+        </div>
+        <div class="content">
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Kreatör</th><th>TikTok</th><th>Följare</th><th>Pris / ad</th><th>Registrerad</th><th></th></tr></thead>
+                <tbody id="creators-tbody"><tr><td colspan="6" class="td-muted" style="padding:20px;text-align:center;">Laddar...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ADMIN: CHATT ══ -->
+      <div class="page" id="page-admin-chat">
+        <div class="page-header">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <button class="btn btn-secondary btn-sm" onclick="showPage('admin-creators')">← Tillbaka</button>
+            <span class="page-title" id="admin-chat-name">–</span>
+          </div>
+        </div>
+        <div class="content" style="max-width:680px;">
+          <div class="card">
+            <div class="card-title" style="margin-bottom:10px;">Snabbsvar</div>
+            <div class="shortcut-pills">
+              <div class="shortcut" onclick="document.getElementById('admin-in').value='Vi har en artist som vill samarbeta med dig för en music ad. Intresserad?'">💬 Direktbokning</div>
+              <div class="shortcut" onclick="document.getElementById('admin-in').value='Vi har en ny kampanj som passar din stil. Vill du delta?'">🎯 Kampanjerbjudande</div>
+              <div class="shortcut" onclick="document.getElementById('admin-in').value='Din milstolpe är verifierad! Pengarna betalas ut inom 7 dagar.'">✅ Milstolpe godkänd</div>
+            </div>
+            <div id="admin-msgs" style="background:var(--bg);border-radius:8px;padding:14px;height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px;">
+              <div class="chat-system"><span>Du skriver som Snowball Team ❄️</span></div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <input id="admin-in" class="form-input" placeholder="Skriv till kreatören..." style="flex:1;" onkeypress="if(event.key==='Enter')sendAdminMsg()" />
+              <button class="btn btn-primary" onclick="sendAdminMsg()">Skicka</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ADMIN: GRANSKA ══ -->
+      <div class="page" id="page-admin-verify">
+        <div class="page-header"><span class="page-title">Granska inlämningar</span></div>
+        <div class="content" style="max-width:700px;">
+          <div id="verify-container">
+            <div class="empty-state"><div class="es-icon">⏳</div><div class="es-title">Laddar inlämningar...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ ADMIN: UTBETALNINGAR ══ -->
+      <div class="page" id="page-admin-payouts">
+        <div class="page-header"><span class="page-title">Utbetalningar</span></div>
+        <div class="content">
+          <div class="stats-row" style="grid-template-columns:repeat(3,1fr);">
+            <div class="stat-card"><div class="stat-label">Totalt utbetalt</div><div class="stat-val" id="payout-total" style="color:var(--green);">0 kr</div></div>
+            <div class="stat-card"><div class="stat-label">Snowball cut (10%)</div><div class="stat-val" id="payout-cut" style="color:var(--brand);">0 kr</div></div>
+            <div class="stat-card"><div class="stat-label">Väntar utbetalning</div><div class="stat-val" id="payout-pending" style="color:var(--yellow);">0 kr</div></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Historik</div></div>
+            <div id="payouts-table">
+              <div class="empty-state"><div class="es-icon">💸</div><div class="es-title">Inga utbetalningar ännu</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /main -->
+  </div><!-- /app-layout -->
+</div><!-- /app -->
+
+<script>
+// ── SUPABASE ──
+const SUPABASE_URL = 'https://rpsyqprpvbiedpyfcmsa.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_bCPvdUDQFov4GqKmp0I29w_J0zIqLHt'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+const ADMIN_PW = 'snowball2025'
+
+let currentCreator = null
+let currentDeal = null
+let allCampaigns = []
+let pendingMsData = null // for milestone modal
+let chatCreatorId = null
+let chatCreatorName = ''
+let allCreators = []
+
+// ── LANDING ──
+function selectRole(role) {
+  document.querySelectorAll('.role-btn').forEach(c => c.classList.remove('active'))
+  document.getElementById('card-' + role)?.classList.add('active')
+  document.getElementById('enter-btn').disabled = false
+}
+function showRegForm() {
+  document.getElementById('role-section').style.display = 'none'
+  document.getElementById('reg-section').style.display = 'block'
+  document.getElementById('admin-dot').style.display = 'none'
+  document.getElementById('reg-name').focus()
+}
+function showAdminLogin() {
+  document.getElementById('role-section').style.display = 'none'
+  document.getElementById('reg-section').style.display = 'none'
+  document.getElementById('admin-section').style.display = 'block'
+  document.getElementById('admin-dot').style.display = 'none'
+  document.getElementById('admin-pw').focus()
+}
+function backToRoles() {
+  document.getElementById('role-section').style.display = 'block'
+  document.getElementById('reg-section').style.display = 'none'
+  document.getElementById('admin-section').style.display = 'none'
+  document.getElementById('admin-dot').style.display = 'block'
+}
+
+async function loginOrRegister() {
+  const name = document.getElementById('reg-name').value.trim()
+  const email = document.getElementById('reg-email').value.trim()
+  const tiktok = document.getElementById('reg-tiktok').value.trim()
+  if (!email) { showToast('❗ Ange din e-post'); return }
+  const btn = document.getElementById('reg-btn')
+  btn.disabled = true; btn.textContent = 'Loggar in...'
+  const { data: existing } = await sb.from('creators').select('*').eq('email', email).maybeSingle()
+  if (existing) {
+    currentCreator = existing
+  } else {
+    if (!name) { showToast('❗ Ange ditt namn'); btn.disabled = false; btn.textContent = 'Kom igång →'; return }
+    const { data, error } = await sb.from('creators').insert({ name, email, tiktok_handle: tiktok || null }).select().single()
+    if (error) { showToast('❌ ' + error.message); btn.disabled = false; btn.textContent = 'Kom igång →'; return }
+    currentCreator = data
+  }
+  btn.disabled = false; btn.textContent = 'Kom igång →'
+  launchCreatorApp()
+}
+
+function loginAdmin() {
+  if (document.getElementById('admin-pw').value !== ADMIN_PW) { showToast('❌ Fel lösenord'); return }
+  document.getElementById('page-landing').style.display = 'none'
+  document.getElementById('app').style.display = 'block'
+  document.getElementById('nav-admin').style.display = 'block'
+  document.getElementById('user-avatar').textContent = '❄️'
+  document.getElementById('user-name').textContent = 'Snowball Team'
+  document.getElementById('user-role').textContent = 'Admin'
+  showPage('admin-home')
+}
+
+function launchCreatorApp() {
+  document.getElementById('page-landing').style.display = 'none'
+  document.getElementById('app').style.display = 'block'
+  document.getElementById('nav-creator').style.display = 'block'
+  document.getElementById('user-avatar').textContent = '👤'
+  document.getElementById('user-name').textContent = currentCreator.name
+  document.getElementById('user-role').textContent = 'Kreatör'
+  document.getElementById('bank-name').value = currentCreator.name
+  showPage('home')
+}
+
+// ── NAVIGATION ──
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  const el = document.getElementById('page-' + id)
+  if (el) el.classList.add('active')
+  document.querySelectorAll('.nav-item').forEach(i => {
+    i.classList.remove('active')
+    const oc = i.getAttribute('onclick') || ''
+    if (oc.includes("'" + id + "'")) i.classList.add('active')
+  })
+  window.scrollTo(0, 0)
+  // Trigger data load
+  if (id === 'home') loadCreatorHome()
+  if (id === 'deals') loadCampaigns()
+  if (id === 'inbox') loadCreatorMessages()
+  if (id === 'milestones') loadMilestones()
+  if (id === 'profile') loadProfile()
+  if (id === 'admin-home') loadAdminHome()
+  if (id === 'admin-verify') loadAdminVerify()
+  if (id === 'admin-creators') loadAdminCreators()
+  if (id === 'admin-payouts') loadAdminPayouts()
+}
+
+// ── CREATOR HOME ──
+async function loadCreatorHome() {
+  if (!currentCreator) return
+  document.getElementById('home-greeting').textContent = 'Hej, ' + currentCreator.name.split(' ')[0] + ' 👋'
+  const { data: deals } = await sb.from('deals').select('*, campaigns(*)').eq('creator_id', currentCreator.id)
+  const tbody = document.getElementById('home-campaigns')
+  if (!deals || deals.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--sub);">Inga kampanjer ännu. <span style="color:var(--brand);cursor:pointer;" onclick="showPage('deals')">Hitta deals →</span></td></tr>`
+    document.getElementById('h-deals').textContent = '0'
+  } else {
+    document.getElementById('h-deals').textContent = deals.length
+    tbody.innerHTML = deals.map(d => `
+      <tr>
+        <td class="td-bold">${d.campaigns?.artist_name || '–'} — "${d.campaigns?.song_title || '–'}"</td>
+        <td><span class="badge badge-active">Pågår</span></td>
+        <td><button class="btn btn-secondary btn-sm" onclick="showPage('milestones')">Visa →</button></td>
+      </tr>`).join('')
+  }
+  // Load approved milestones for earnings
+  const { data: ms } = await sb.from('milestones').select('amount,status').eq('creator_id', currentCreator.id)
+  const earned = ms ? ms.filter(m => m.status === 'godkänd').reduce((s, m) => s + m.amount, 0) : 0
+  const pending = ms ? ms.filter(m => m.status === 'väntar').reduce((s, m) => s + m.amount, 0) : 0
+  document.getElementById('h-balance').textContent = earned + ' kr'
+  document.getElementById('h-balance2').textContent = earned + ' kr'
+  document.getElementById('h-earned').textContent = earned + ' kr'
+  document.getElementById('h-views').textContent = ms && ms.length ? (ms.reduce((s, m) => s + 0, 0) + '–') : '–'
+  document.getElementById('home-transactions').textContent = earned > 0 ? earned + ' kr godkänt av Snowball' : 'Inga transaktioner ännu'
+}
+
+// ── DEALS / CAMPAIGNS ──
+async function loadCampaigns() {
+  const grid = document.getElementById('deals-grid')
+  grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="es-icon">⏳</div><div class="es-title">Laddar kampanjer...</div></div>'
+  const { data, error } = await sb.from('campaigns').select('*').eq('active', true).order('created_at', { ascending: false })
+  if (error || !data || data.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="es-icon">🎵</div><div class="es-title">Inga aktiva kampanjer just nu</div><div class="es-sub">Snowball Team lägger upp nya deals löpande — kom tillbaka snart!</div></div>'
+    return
+  }
+  allCampaigns = data
+  renderDeals(data)
+}
+
+function renderDeals(data) {
+  const grid = document.getElementById('deals-grid')
+  grid.innerHTML = data.map(c => {
+    const pct = c.budget_total > 0 ? Math.round((1 - c.budget_remaining / c.budget_total) * 100) : 0
+    return `<div class="deal-card" onclick="showDealDetail('${c.id}')">
+      <div class="deal-top">
+        <div><div class="deal-artist">${c.artist_name}</div><div class="deal-song">🎵 "${c.song_title}"${c.genre ? ' — ' + c.genre : ''}</div></div>
+        <span class="badge badge-active">Aktiv</span>
+      </div>
+      <div class="deal-rate">${c.rate_per_1000} kr</div>
+      <div class="deal-rate-sub">per 1 000 vis. · max ${c.max_per_creator} kr</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${pct}%;"></div></div>
+      <div class="deal-meta">
+        <span>${Math.round(c.budget_remaining).toLocaleString('sv')} / ${Math.round(c.budget_total).toLocaleString('sv')} kr kvar</span>
+        <span>${c.end_date || c.campaign_length || '30 dagar'}</span>
+      </div>
+      <div class="deal-tags">${(c.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}</div>
+    </div>`
+  }).join('')
+}
+
+function filterDeals() {
+  const q = document.getElementById('deals-search').value.toLowerCase()
+  const filtered = allCampaigns.filter(c => c.artist_name.toLowerCase().includes(q) || c.song_title.toLowerCase().includes(q) || (c.genre || '').toLowerCase().includes(q))
+  renderDeals(filtered)
+}
+
+function showDealDetail(id) {
+  const c = allCampaigns.find(x => x.id === id)
+  if (!c) return
+  currentDeal = c
+  document.getElementById('detail-title').textContent = c.artist_name + ' — "' + c.song_title + '"'
+  document.getElementById('detail-sub').textContent = (c.genre || '') + (c.end_date ? ' · Sista dag ' + c.end_date : '')
+  document.getElementById('detail-rate-10k').textContent = '= ' + (c.rate_per_1000 * 10) + ' kr'
+  document.getElementById('detail-max').textContent = c.max_per_creator + ' kr'
+  document.getElementById('detail-max-views').textContent = Math.round(c.max_per_creator / c.rate_per_1000 * 1000).toLocaleString('sv')
+  const pct = c.budget_total > 0 ? Math.round((1 - c.budget_remaining / c.budget_total) * 100) : 0
+  document.getElementById('detail-budget-bar').style.width = pct + '%'
+  document.getElementById('detail-budget-text').textContent = Math.round(c.budget_remaining).toLocaleString('sv') + ' kr av ' + Math.round(c.budget_total).toLocaleString('sv') + ' kr'
+  const req = document.getElementById('detail-requirements')
+  req.innerHTML = c.requirements ? c.requirements.split('\n').filter(Boolean).map(r => `<div>✓ ${r}</div>`).join('') : '<div style="color:var(--sub)">Inga specifika krav</div>'
+  document.getElementById('page-deals').classList.remove('active')
+  document.getElementById('page-deal-detail').classList.add('active')
+}
+
+let detailTiktokUrl = ''
+function openTiktokSound() { if (detailTiktokUrl) window.open(detailTiktokUrl, '_blank') }
+
+async function applyToCampaign() {
+  if (!currentCreator || !currentDeal) return
+  const { data: ex } = await sb.from('deals').select('id').eq('creator_id', currentCreator.id).eq('campaign_id', currentDeal.id).maybeSingle()
+  if (ex) { showToast('✅ Du är redan med i den här kampanjen!'); showPage('home'); return }
+  const { error } = await sb.from('deals').insert({ creator_id: currentCreator.id, campaign_id: currentDeal.id })
+  if (error) { showToast('❌ ' + error.message); return }
+  showToast('🎬 Du är med! Hittas under Mina kampanjer.')
+  showPage('home')
+}
+
+// ── MILESTONES ──
+const MS_LEVELS = [1000, 5000, 10000, 25000, 100000]
+let creatorDeals = []
+
+async function loadMilestones() {
+  if (!currentCreator) return
+  const container = document.getElementById('milestones-container')
+  const { data: deals } = await sb.from('deals').select('*, campaigns(*)').eq('creator_id', currentCreator.id)
+  if (!deals || deals.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="es-icon">📊</div><div class="es-title">Inga aktiva kampanjer</div><div class="es-sub">Gå till Deals och anslut till en kampanj för att börja tjäna.</div></div>'
+    return
+  }
+  creatorDeals = deals
+  const { data: existingMs } = await sb.from('milestones').select('*').eq('creator_id', currentCreator.id)
+  container.innerHTML = deals.map(d => {
+    const c = d.campaigns
+    const myMs = existingMs ? existingMs.filter(m => m.campaign_id === d.campaign_id) : []
+    const levels = MS_LEVELS.map(views => {
+      const amount = Math.min(Math.round(views / 1000 * c.rate_per_1000), c.max_per_creator)
+      const existing = myMs.find(m => m.views === views)
+      let circleClass = '', circleText = '○', descText = 'Tryck när du nått hit', amountClass = 'locked'
+      if (existing) {
+        if (existing.status === 'godkänd') { circleClass = 'done'; circleText = '✓'; descText = 'Godkänt av Snowball ✅'; amountClass = '' }
+        else { circleClass = 'waiting'; circleText = '⏳'; descText = 'Väntar på Snowball'; amountClass = '' }
+      }
+      const clickable = !existing ? `onclick="openMilestoneModal('${d.campaign_id}', ${views}, ${c.rate_per_1000}, ${c.max_per_creator}, '${c.artist_name}', '${c.song_title}')"` : ''
+      return `<div class="ms-row" style="${!existing ? 'cursor:pointer;' : ''}" ${clickable}>
+        <div class="ms-circle ${circleClass}">${circleText}</div>
+        <div><div class="ms-title">${views.toLocaleString('sv')} visningar</div><div class="ms-desc">${descText}</div></div>
+        <div class="ms-amount ${amountClass}">+${amount} kr</div>
+      </div>`
+    }).join('')
+    return `<div class="card">
+      <div class="card-header"><div><div class="card-title">${c.artist_name} — "${c.song_title}"</div><div style="font-size:12px;color:var(--sub);margin-top:2px;">${c.rate_per_1000} kr / 1 000 vis. · max ${c.max_per_creator} kr</div></div></div>
+      <div>${levels}</div>
+    </div>`
+  }).join('')
+}
+
+function openMilestoneModal(campaignId, views, rate, maxPay, artist, song) {
+  pendingMsData = { campaignId, views, amount: Math.min(Math.round(views / 1000 * rate), maxPay) }
+  document.getElementById('ms-modal-info').innerHTML = `<strong>${artist} — "${song}"</strong><br>${views.toLocaleString('sv')} visningar → <strong style="color:var(--green);">+${pendingMsData.amount} kr</strong>`
+  document.getElementById('ms-link').value = ''
+  openModal('modal-milestone')
+}
+
+async function submitMilestone() {
+  if (!pendingMsData || !currentCreator) return
+  const link = document.getElementById('ms-link').value.trim()
+  if (!link) { showToast('❗ Ange TikTok-länken till din video'); return }
+  const { error } = await sb.from('milestones').insert({ creator_id: currentCreator.id, campaign_id: pendingMsData.campaignId, views: pendingMsData.views, amount: pendingMsData.amount, tiktok_link: link })
+  if (error) { showToast('❌ ' + error.message); return }
+  showToast('✅ Inbockat! Snowball granskar inom 24h.')
+  closeModal('modal-milestone')
+  loadMilestones()
+}
+
+// ── PROFILE ──
+async function loadProfile() {
+  if (!currentCreator) return
+  document.getElementById('profile-name').textContent = currentCreator.name
+  document.getElementById('profile-handle').textContent = currentCreator.tiktok_handle ? '@' + currentCreator.tiktok_handle : currentCreator.email
+  document.getElementById('profile-price').textContent = (currentCreator.price || 300) + ' kr'
+  const { data: deals } = await sb.from('deals').select('id').eq('creator_id', currentCreator.id)
+  document.getElementById('profile-deals').textContent = deals ? deals.length : 0
+}
+
+// ── MESSAGES ──
+async function loadCreatorMessages() {
+  if (!currentCreator) return
+  const msgs = document.getElementById('chat-msgs')
+  const { data } = await sb.from('messages').select('*').eq('creator_id', currentCreator.id).order('created_at', { ascending: true })
+  msgs.innerHTML = '<div class="chat-system"><span>Välkommen! Snowball Team kontaktar dig här ❄️</span></div>'
+  if (data && data.length) {
+    data.forEach(m => {
+      const div = document.createElement('div')
+      div.className = 'msg-bubble ' + (m.from_admin ? 'them' : 'me')
+      div.innerHTML = `<div class="bubble-text">${m.text}</div><div class="bubble-time">${new Date(m.created_at).toLocaleTimeString('sv',{hour:'2-digit',minute:'2-digit'})}</div>`
+      msgs.appendChild(div)
+    })
+    msgs.scrollTop = msgs.scrollHeight
+  }
+}
+
+async function sendCreatorMsg() {
+  const input = document.getElementById('chat-in')
+  const text = input.value.trim()
+  if (!text || !currentCreator) return
+  const { error } = await sb.from('messages').insert({ creator_id: currentCreator.id, from_admin: false, text })
+  if (error) { showToast('❌ ' + error.message); return }
+  input.value = ''
+  loadCreatorMessages()
+}
+
+// ── ADMIN HOME ──
+async function loadAdminHome() {
+  const [{ data: cams }, { data: creators }, { data: ms }] = await Promise.all([
+    sb.from('campaigns').select('id,artist_name,song_title,budget_remaining,budget_total,active'),
+    sb.from('creators').select('id'),
+    sb.from('milestones').select('*,creator_id,campaign_id').eq('status', 'väntar')
+  ])
+  const active = cams ? cams.filter(c => c.active).length : 0
+  document.getElementById('admin-stat-campaigns').textContent = active
+  document.getElementById('admin-stat-creators').textContent = creators ? creators.length : 0
+  document.getElementById('admin-stat-pending').textContent = ms ? ms.length : 0
+  if (ms && ms.length > 0) {
+    const badge = document.getElementById('verify-badge')
+    badge.style.display = 'inline'
+    badge.textContent = ms.length
+  }
+  // Campaigns table
+  const tbody = document.getElementById('admin-campaigns-tbody')
+  if (!cams || cams.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:28px;color:var(--sub);">Inga kampanjer. Tryck "+ Ny kampanj" för att börja.</td></tr>'
+  } else {
+    tbody.innerHTML = cams.map(c => `<tr>
+    <td class="td-bold">${c.artist_name}</td>
+    <td>"${c.song_title}"</td>
+    <td>${Math.round(c.budget_remaining).toLocaleString('sv')} kr</td>
+    <td><span class="badge ${c.active ? 'badge-active' : 'badge-done'}">${c.active ? 'Aktiv' : 'Pausad'}</span></td>
+    <td><button class="btn btn-secondary btn-sm" onclick="toggleCampaign('${c.id}', ${c.active})">${c.active ? '⏸ Pausa' : '▶ Aktivera'}</button></td>
+  </tr>`).join('')
+  }
+  // Pending preview
+  const el = document.getElementById('admin-pending-list')
+  if (!ms || ms.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="padding:24px;"><div class="es-icon" style="font-size:24px;">✅</div><div class="es-title" style="font-size:13px;">Allt granskat</div></div>'
+    return
+  }
+  const enriched = await enrichMilestones(ms.slice(0, 3))
+  el.innerHTML = enriched.map(m => `
+    <div style="display:flex;align-items:center;gap:12px;background:var(--bg);border-radius:8px;padding:11px;margin-bottom:8px;">
+      <div style="font-size:20px;">👤</div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:700;">${m.creatorName}</div><div style="font-size:12px;color:var(--sub);">${m.campaignName} · ${m.views.toLocaleString('sv')} vis. · +${m.amount} kr</div></div>
+      <div style="display:flex;gap:6px;">
+        <button onclick="rejectMs('${m.id}')" class="btn btn-danger btn-sm">Avvisa</button>
+        <button onclick="approveMs('${m.id}', ${m.amount}, '${m.creatorName.replace(/'/g,"\\'")}', '${m.creator_id}')" class="btn btn-success btn-sm">✅ OK</button>
+      </div>
+    </div>`).join('')
+}
+
+async function enrichMilestones(ms) {
+  return Promise.all(ms.map(async m => {
+    const [{ data: cr }, { data: ca }] = await Promise.all([
+      sb.from('creators').select('name').eq('id', m.creator_id).maybeSingle(),
+      sb.from('campaigns').select('artist_name,song_title').eq('id', m.campaign_id).maybeSingle()
+    ])
+    return { ...m, creatorName: cr?.name || 'Kreatör', campaignName: ca ? ca.artist_name + ' — ' + ca.song_title : '–' }
+  }))
+}
+
+// ── ADMIN CREATE CAMPAIGN ──
+async function createCampaign() {
+  const artist = document.getElementById('camp-artist').value.trim()
+  const song = document.getElementById('camp-song').value.trim()
+  if (!artist || !song) { showToast('❗ Ange artist och låttitel'); return }
+  const budget = parseFloat(document.getElementById('camp-budget').value) || 10000
+  const rate = parseFloat(document.getElementById('camp-rate').value) || 10
+  const max = parseFloat(document.getElementById('camp-max').value) || 1000
+  const { error } = await sb.from('campaigns').insert({
+    artist_name: artist, song_title: song,
+    tiktok_url: document.getElementById('camp-tiktok').value.trim(),
+    genre: document.getElementById('camp-genre').value.trim(),
+    budget_total: budget, budget_remaining: budget,
+    rate_per_1000: rate, max_per_creator: max,
+    campaign_length: document.getElementById('camp-length').value,
+    requirements: document.getElementById('camp-req').value.trim()
+  })
+  if (error) { showToast('❌ ' + error.message); return }
+  showToast('✅ Kampanj publicerad! Kreatörer kan nu se den.')
+  closeModal('modal-campaign')
+  // Clear form
+  ;['camp-artist','camp-song','camp-tiktok','camp-genre','camp-req'].forEach(id => document.getElementById(id).value = '')
+  if (document.getElementById('page-admin-home').classList.contains('active')) loadAdminHome()
+}
+
+// ── ADMIN VERIFY ──
+async function loadAdminVerify() {
+  const container = document.getElementById('verify-container')
+  container.innerHTML = '<div class="empty-state"><div class="es-icon">⏳</div><div class="es-title">Laddar...</div></div>'
+  const { data } = await sb.from('milestones').select('*').eq('status', 'väntar').order('created_at', { ascending: false })
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="empty-state"><div class="es-icon">✅</div><div class="es-title">Inga inlämningar väntar</div><div class="es-sub">Allt är granskat!</div></div>'
+    return
+  }
+  const enriched = await enrichMilestones(data)
+  container.innerHTML = enriched.map(m => `
+    <div class="card" id="verify-${m.id}" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div style="font-size:26px;">👤</div>
+        <div style="flex:1;"><div style="font-size:14px;font-weight:700;">${m.creatorName}</div><div style="font-size:12px;color:var(--sub);">${m.campaignName} · ${m.views.toLocaleString('sv')} visningar · +${m.amount} kr</div></div>
+        <span class="badge badge-pending">Väntar</span>
+      </div>
+      ${m.tiktok_link ? `<div onclick="window.open('${m.tiktok_link}','_blank')" style="display:flex;align-items:center;gap:10px;background:#111827;border-radius:8px;padding:11px;cursor:pointer;margin-bottom:12px;"><div style="width:30px;height:30px;background:var(--brand);border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;flex-shrink:0;">▶</div><div style="font-size:12px;color:#93c5fd;font-family:monospace;word-break:break-all;">${m.tiktok_link}</div></div>` : '<div class="alert alert-yellow" style="margin-bottom:12px;">Ingen TikTok-länk angiven</div>'}
+      <div style="display:flex;gap:10px;">
+        <button onclick="rejectMs('${m.id}')" class="btn btn-danger" style="flex:1;">Avvisa</button>
+        <button onclick="approveMs('${m.id}', ${m.amount}, '${m.creatorName.replace(/'/g,"\\'")}', '${m.creator_id}')" class="btn btn-success" style="flex:2;">✅ Godkänn & betala ut</button>
+      </div>
+    </div>`).join('')
+}
+
+async function approveMs(id, amount, name, creatorId) {
+  const { error } = await sb.from('milestones').update({ status: 'godkänd' }).eq('id', id)
+  if (error) { showToast('❌ ' + error.message); return }
+  showToast(`✅ Godkänt! ${amount} kr betalas ut till ${name} inom 7 dagar.`)
+  document.getElementById('verify-' + id)?.remove()
+  loadAdminHome()
+}
+
+async function rejectMs(id) {
+  const { error } = await sb.from('milestones').update({ status: 'avvisad' }).eq('id', id)
+  if (error) { showToast('❌ ' + error.message); return }
+  showToast('❌ Avvisat')
+  document.getElementById('verify-' + id)?.remove()
+}
+
+// ── ADMIN CREATORS ──
+async function loadAdminCreators() {
+  const tbody = document.getElementById('creators-tbody')
+  const { data } = await sb.from('creators').select('*').order('created_at', { ascending: false })
+  allCreators = data || []
+  renderCreators(allCreators)
+}
+
+function renderCreators(data) {
+  const tbody = document.getElementById('creators-tbody')
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:36px;color:var(--sub);">Inga kreatörer registrerade ännu</td></tr>'
+    return
+  }
+  tbody.innerHTML = data.map(c => `<tr>
+    <td><div style="display:flex;align-items:center;gap:10px;"><div style="font-size:18px;">👤</div><div class="td-bold">${c.name}</div></div></td>
+    <td class="td-muted">${c.tiktok_handle ? '@' + c.tiktok_handle : '–'}</td>
+    <td>${c.followers ? c.followers.toLocaleString('sv') : '–'}</td>
+    <td>${c.price || 300} kr</td>
+    <td class="td-muted">${new Date(c.created_at).toLocaleDateString('sv')}</td>
+    <td><button class="btn btn-secondary btn-sm" onclick="startAdminChat('${c.id}','${c.name.replace(/'/g,"\\'")}')">💬 Kontakta</button></td>
+  </tr>`).join('')
+}
+
+function filterCreators(q) {
+  const filtered = allCreators.filter(c => c.name.toLowerCase().includes(q.toLowerCase()) || (c.tiktok_handle || '').toLowerCase().includes(q.toLowerCase()))
+  renderCreators(filtered)
+}
+
+// ── ADMIN CHAT ──
+function startAdminChat(id, name) {
+  chatCreatorId = id; chatCreatorName = name
+  document.getElementById('admin-chat-name').textContent = name
+  document.getElementById('admin-msgs').innerHTML = '<div class="chat-system"><span>Du skriver som Snowball Team ❄️</span></div>'
+  showPage('admin-chat')
+  loadAdminMessages()
+}
+
+async function loadAdminMessages() {
+  if (!chatCreatorId) return
+  const msgs = document.getElementById('admin-msgs')
+  const { data } = await sb.from('messages').select('*').eq('creator_id', chatCreatorId).order('created_at', { ascending: true })
+  msgs.innerHTML = '<div class="chat-system"><span>Du skriver som Snowball Team ❄️</span></div>'
+  if (data && data.length) {
+    data.forEach(m => {
+      const div = document.createElement('div')
+      if (m.from_admin) {
+        div.style.cssText = 'max-width:70%;align-self:flex-end;'
+        div.innerHTML = `<div style="background:var(--brand);color:white;border-radius:10px;border-bottom-right-radius:3px;padding:9px 13px;font-size:13.5px;">${m.text}</div><div style="font-size:11px;color:var(--sub2);margin-top:3px;text-align:right;">Snowball Team</div>`
+      } else {
+        div.style.cssText = 'max-width:70%;'
+        div.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13.5px;">${m.text}</div><div style="font-size:11px;color:var(--sub2);margin-top:3px;">${chatCreatorName}</div>`
+      }
+      msgs.appendChild(div)
+    })
+    msgs.scrollTop = msgs.scrollHeight
+  }
+}
+
+async function sendAdminMsg() {
+  const input = document.getElementById('admin-in')
+  const text = input.value.trim()
+  if (!text || !chatCreatorId) return
+  const { error } = await sb.from('messages').insert({ creator_id: chatCreatorId, from_admin: true, text })
+  if (error) { showToast('❌ ' + error.message); return }
+  input.value = ''
+  loadAdminMessages()
+}
+
+// ── TOGGLE CAMPAIGN ──
+async function toggleCampaign(id, currentlyActive) {
+  const { error } = await sb.from('campaigns').update({ active: !currentlyActive }).eq('id', id)
+  if (error) { showToast('❌ ' + error.message); return }
+  showToast(currentlyActive ? '⏸ Kampanj pausad' : '▶ Kampanj aktiverad')
+  loadAdminHome()
+}
+
+// ── ADMIN PAYOUTS ──
+async function loadAdminPayouts() {
+  const { data } = await sb.from('milestones').select('amount,status').eq('status', 'godkänd')
+  const total = data ? data.reduce((s, m) => s + m.amount, 0) : 0
+  document.getElementById('payout-total').textContent = total + ' kr'
+  document.getElementById('payout-cut').textContent = Math.round(total * 0.1) + ' kr'
+  document.getElementById('admin-stat-cut').textContent = Math.round(total * 0.1) + ' kr'
+}
+
+// ── UTILS ──
+function showToast(msg) {
+  const t = document.getElementById('toast')
+  t.textContent = msg; t.classList.add('show')
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 3000)
+}
+function openModal(id) { document.getElementById(id).classList.add('open') }
+function closeModal(id) { document.getElementById(id).classList.remove('open') }
+</script>
+</body>
+</html>
