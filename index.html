@@ -271,6 +271,26 @@
   </div>
 </div>
 
+<!-- MODAL: SKICKA IN VIDEOLÄNK (en gång per kampanj) -->
+<div class="modal-overlay" id="modal-video-link">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-top">
+      <div class="modal-title">📎 Lägg till din TikTok-video</div>
+      <button class="modal-close" onclick="closeModal('modal-video-link')">✕</button>
+    </div>
+    <div id="video-link-modal-info" style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--sub);"></div>
+    <p style="font-size:13px;color:var(--sub);margin-bottom:14px;">Klistra in länken till din TikTok-video med låten. Du behöver bara göra det här en gång — vi följer sedan visningarna automatiskt.</p>
+    <div class="form-group">
+      <label class="form-label">TikTok-länk till din video</label>
+      <input class="form-input" id="video-link-input" placeholder="https://tiktok.com/@ditt-handle/video/..." />
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('modal-video-link')">Senare</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="submitVideoLink()">Spara länk →</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: SKICKA IN MILESTONE -->
 <div class="modal-overlay" id="modal-milestone">
   <div class="modal-box" style="max-width:420px;">
@@ -313,15 +333,30 @@
       <button class="btn-enter" id="enter-btn" disabled onclick="showRegForm()">Kom igång →</button>
     </div>
 
-    <!-- Registreringsformulär -->
+    <!-- Inloggning / Registrering -->
     <div id="reg-section" style="display:none;">
-      <div class="landing-form">
-        <input class="landing-input" id="reg-name" placeholder="Ditt namn" />
-        <input class="landing-input" id="reg-email" type="email" placeholder="E-post" />
-        <input class="landing-input" id="reg-tiktok" placeholder="TikTok @handle (valfritt)" />
+      <!-- Flikar -->
+      <div style="display:flex;gap:8px;margin-bottom:20px;">
+        <button id="tab-login" onclick="switchTab('login')" style="flex:1;background:rgba(108,71,255,0.15);border:1.5px solid var(--brand);border-radius:8px;padding:9px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Logga in</button>
+        <button id="tab-register" onclick="switchTab('register')" style="flex:1;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.1);border-radius:8px;padding:9px;font-size:13px;font-weight:700;color:rgba(255,255,255,0.4);cursor:pointer;">Skapa konto</button>
       </div>
-      <button class="btn-enter" id="reg-btn" onclick="loginOrRegister()">Kom igång →</button>
-      <div class="landing-back" onclick="backToRoles()">← Tillbaka</div>
+      <!-- Logga in -->
+      <div id="form-login">
+        <div class="landing-form">
+          <input class="landing-input" id="login-email" type="email" placeholder="Din e-post" onkeypress="if(event.key==='Enter')doLogin()" />
+        </div>
+        <button class="btn-enter" id="login-btn" onclick="doLogin()">Logga in →</button>
+      </div>
+      <!-- Skapa konto -->
+      <div id="form-register" style="display:none;">
+        <div class="landing-form">
+          <input class="landing-input" id="reg-name" placeholder="Ditt namn" />
+          <input class="landing-input" id="reg-email" type="email" placeholder="E-post" />
+          <input class="landing-input" id="reg-tiktok" placeholder="TikTok @handle (valfritt)" />
+        </div>
+        <button class="btn-enter" id="reg-btn" onclick="doRegister()">Skapa konto →</button>
+      </div>
+      <div class="landing-back" onclick="backToRoles()" style="margin-top:14px;">← Tillbaka</div>
     </div>
 
     <!-- Admin-inloggning -->
@@ -689,9 +724,9 @@
         <div class="page-header"><span class="page-title">Utbetalningar</span></div>
         <div class="content">
           <div class="stats-row" style="grid-template-columns:repeat(3,1fr);">
-            <div class="stat-card"><div class="stat-label">Totalt utbetalt</div><div class="stat-val" id="payout-total" style="color:var(--green);">0 kr</div></div>
+            <div class="stat-card"><div class="stat-label">Utbetalt</div><div class="stat-val" id="payout-total" style="color:var(--green);">0 kr</div><div class="stat-hint">Markerade som utbetalda</div></div>
             <div class="stat-card"><div class="stat-label">Snowball cut (10%)</div><div class="stat-val" id="payout-cut" style="color:var(--brand);">0 kr</div></div>
-            <div class="stat-card"><div class="stat-label">Väntar utbetalning</div><div class="stat-val" id="payout-pending" style="color:var(--yellow);">0 kr</div></div>
+            <div class="stat-card"><div class="stat-label">Godkänt, ej utbetalt</div><div class="stat-val" id="payout-pending" style="color:var(--yellow);">0 kr</div><div class="stat-hint warn">Redo att betala ut</div></div>
           </div>
           <div class="card">
             <div class="card-header"><div class="card-title">Historik</div></div>
@@ -731,7 +766,48 @@ function showRegForm() {
   document.getElementById('role-section').style.display = 'none'
   document.getElementById('reg-section').style.display = 'block'
   document.getElementById('admin-dot').style.display = 'none'
-  document.getElementById('reg-name').focus()
+  document.getElementById('login-email').focus()
+}
+
+function switchTab(tab) {
+  const isLogin = tab === 'login'
+  document.getElementById('form-login').style.display = isLogin ? 'block' : 'none'
+  document.getElementById('form-register').style.display = isLogin ? 'none' : 'block'
+  document.getElementById('tab-login').style.background = isLogin ? 'rgba(108,71,255,0.15)' : 'rgba(255,255,255,0.05)'
+  document.getElementById('tab-login').style.borderColor = isLogin ? 'var(--brand)' : 'rgba(255,255,255,0.1)'
+  document.getElementById('tab-login').style.color = isLogin ? '#fff' : 'rgba(255,255,255,0.4)'
+  document.getElementById('tab-register').style.background = isLogin ? 'rgba(255,255,255,0.05)' : 'rgba(108,71,255,0.15)'
+  document.getElementById('tab-register').style.borderColor = isLogin ? 'rgba(255,255,255,0.1)' : 'var(--brand)'
+  document.getElementById('tab-register').style.color = isLogin ? 'rgba(255,255,255,0.4)' : '#fff'
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim()
+  if (!email) { showToast('❗ Ange din e-post'); return }
+  const btn = document.getElementById('login-btn')
+  btn.disabled = true; btn.textContent = 'Loggar in...'
+  const { data: existing } = await sb.from('creators').select('*').eq('email', email).maybeSingle()
+  btn.disabled = false; btn.textContent = 'Logga in →'
+  if (!existing) { showToast('❌ Inget konto hittades. Skapa ett konto istället.'); switchTab('register'); document.getElementById('reg-email').value = email; return }
+  currentCreator = existing
+  launchCreatorApp()
+}
+
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim()
+  const email = document.getElementById('reg-email').value.trim()
+  const tiktok = document.getElementById('reg-tiktok').value.trim()
+  if (!name) { showToast('❗ Ange ditt namn'); return }
+  if (!email) { showToast('❗ Ange din e-post'); return }
+  const btn = document.getElementById('reg-btn')
+  btn.disabled = true; btn.textContent = 'Skapar konto...'
+  const { data: existing } = await sb.from('creators').select('*').eq('email', email).maybeSingle()
+  if (existing) { btn.disabled = false; btn.textContent = 'Skapa konto →'; showToast('✅ Konto finns redan! Loggar in...'); currentCreator = existing; launchCreatorApp(); return }
+  const { data, error } = await sb.from('creators').insert({ name, email, tiktok_handle: tiktok || null }).select().single()
+  btn.disabled = false; btn.textContent = 'Skapa konto →'
+  if (error) { showToast('❌ ' + error.message); return }
+  currentCreator = data
+  launchCreatorApp()
 }
 function showAdminLogin() {
   document.getElementById('role-section').style.display = 'none'
@@ -747,25 +823,6 @@ function backToRoles() {
   document.getElementById('admin-dot').style.display = 'block'
 }
 
-async function loginOrRegister() {
-  const name = document.getElementById('reg-name').value.trim()
-  const email = document.getElementById('reg-email').value.trim()
-  const tiktok = document.getElementById('reg-tiktok').value.trim()
-  if (!email) { showToast('❗ Ange din e-post'); return }
-  const btn = document.getElementById('reg-btn')
-  btn.disabled = true; btn.textContent = 'Loggar in...'
-  const { data: existing } = await sb.from('creators').select('*').eq('email', email).maybeSingle()
-  if (existing) {
-    currentCreator = existing
-  } else {
-    if (!name) { showToast('❗ Ange ditt namn'); btn.disabled = false; btn.textContent = 'Kom igång →'; return }
-    const { data, error } = await sb.from('creators').insert({ name, email, tiktok_handle: tiktok || null }).select().single()
-    if (error) { showToast('❌ ' + error.message); btn.disabled = false; btn.textContent = 'Kom igång →'; return }
-    currentCreator = data
-  }
-  btn.disabled = false; btn.textContent = 'Kom igång →'
-  launchCreatorApp()
-}
 
 function loginAdmin() {
   if (document.getElementById('admin-pw').value !== ADMIN_PW) { showToast('❌ Fel lösenord'); return }
@@ -805,6 +862,7 @@ function showPage(id) {
   if (id === 'deals') loadCampaigns()
   if (id === 'inbox') loadCreatorMessages()
   if (id === 'milestones') loadMilestones()
+  if (id === 'income') loadIncome()
   if (id === 'profile') loadProfile()
   if (id === 'admin-home') loadAdminHome()
   if (id === 'admin-verify') loadAdminVerify()
@@ -816,29 +874,47 @@ function showPage(id) {
 async function loadCreatorHome() {
   if (!currentCreator) return
   document.getElementById('home-greeting').textContent = 'Hej, ' + currentCreator.name.split(' ')[0] + ' 👋'
-  const { data: deals } = await sb.from('deals').select('*, campaigns(*)').eq('creator_id', currentCreator.id)
+  const { data: deals } = await sb.from('deals').select('id, video_link, campaigns(artist_name, song_title)').eq('creator_id', currentCreator.id)
   const tbody = document.getElementById('home-campaigns')
   if (!deals || deals.length === 0) {
     tbody.innerHTML = `<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--sub);">Inga kampanjer ännu. <span style="color:var(--brand);cursor:pointer;" onclick="showPage('deals')">Hitta deals →</span></td></tr>`
     document.getElementById('h-deals').textContent = '0'
   } else {
     document.getElementById('h-deals').textContent = deals.length
-    tbody.innerHTML = deals.map(d => `
-      <tr>
+    tbody.innerHTML = deals.map(d => {
+      const hasvideo = d.video_link && d.video_link.length > 0
+      const badge = hasvideo
+        ? '<span class="badge badge-active">🎬 Pågående</span>'
+        : '<span class="badge badge-pending">📎 Lägg till video</span>'
+      return `<tr>
         <td class="td-bold">${d.campaigns?.artist_name || '–'} — "${d.campaigns?.song_title || '–'}"</td>
-        <td><span class="badge badge-active">Pågår</span></td>
+        <td>${badge}</td>
         <td><button class="btn btn-secondary btn-sm" onclick="showPage('milestones')">Visa →</button></td>
-      </tr>`).join('')
+      </tr>`
+    }).join('')
   }
-  // Load approved milestones for earnings
+  // Load milestones for earnings
   const { data: ms } = await sb.from('milestones').select('amount,status').eq('creator_id', currentCreator.id)
-  const earned = ms ? ms.filter(m => m.status === 'godkänd').reduce((s, m) => s + m.amount, 0) : 0
+  const earned = ms ? ms.filter(m => m.status === 'godkänd' || m.status === 'utbetald').reduce((s, m) => s + m.amount, 0) : 0
   const pending = ms ? ms.filter(m => m.status === 'väntar').reduce((s, m) => s + m.amount, 0) : 0
   document.getElementById('h-balance').textContent = earned + ' kr'
   document.getElementById('h-balance2').textContent = earned + ' kr'
   document.getElementById('h-earned').textContent = earned + ' kr'
-  document.getElementById('h-views').textContent = ms && ms.length ? (ms.reduce((s, m) => s + 0, 0) + '–') : '–'
-  document.getElementById('home-transactions').textContent = earned > 0 ? earned + ' kr godkänt av Snowball' : 'Inga transaktioner ännu'
+  document.getElementById('h-views').textContent = pending > 0 ? pending + ' kr väntar' : '0 kr väntar'
+  // Recent transactions
+  const recentEl = document.getElementById('home-transactions')
+  if (ms && ms.length > 0) {
+    const approved = ms.filter(m => m.status === 'godkänd' || m.status === 'utbetald')
+    const waiting = ms.filter(m => m.status === 'väntar')
+    const rejected = ms.filter(m => m.status === 'avvisad')
+    let html = ''
+    if (approved.length) html += `<div style="color:var(--green);margin-bottom:4px;">✅ ${approved.length} godkänd${approved.length > 1 ? 'a' : ''} · ${earned} kr</div>`
+    if (waiting.length) html += `<div style="color:var(--yellow);margin-bottom:4px;">⏳ ${waiting.length} väntar granskning · ${pending} kr</div>`
+    if (rejected.length) html += `<div style="color:var(--red);">❌ ${rejected.length} avvisad${rejected.length > 1 ? 'e' : ''}</div>`
+    recentEl.innerHTML = html || 'Inga transaktioner ännu'
+  } else {
+    recentEl.textContent = 'Inga transaktioner ännu'
+  }
 }
 
 // ── DEALS / CAMPAIGNS ──
@@ -902,13 +978,37 @@ function showDealDetail(id) {
 let detailTiktokUrl = ''
 function openTiktokSound() { if (detailTiktokUrl) window.open(detailTiktokUrl, '_blank') }
 
+let pendingDealId = null
+
 async function applyToCampaign() {
   if (!currentCreator || !currentDeal) return
-  const { data: ex } = await sb.from('deals').select('id').eq('creator_id', currentCreator.id).eq('campaign_id', currentDeal.id).maybeSingle()
-  if (ex) { showToast('✅ Du är redan med i den här kampanjen!'); showPage('home'); return }
-  const { error } = await sb.from('deals').insert({ creator_id: currentCreator.id, campaign_id: currentDeal.id })
+  const { data: ex } = await sb.from('deals').select('id,video_link').eq('creator_id', currentCreator.id).eq('campaign_id', currentDeal.id).maybeSingle()
+  if (ex) {
+    if (ex.video_link) { showToast('✅ Du är redan med och har laddat upp din video!'); showPage('home'); return }
+    // Already applied but no video link yet — prompt to add it
+    pendingDealId = ex.id
+    document.getElementById('video-link-modal-info').innerHTML = `<strong>${currentDeal.artist_name} — "${currentDeal.song_title}"</strong>`
+    document.getElementById('video-link-input').value = ''
+    openModal('modal-video-link')
+    return
+  }
+  const { data: deal, error } = await sb.from('deals').insert({ creator_id: currentCreator.id, campaign_id: currentDeal.id }).select().single()
   if (error) { showToast('❌ ' + error.message); return }
-  showToast('🎬 Du är med! Hittas under Mina kampanjer.')
+  pendingDealId = deal.id
+  document.getElementById('video-link-modal-info').innerHTML = `<strong>${currentDeal.artist_name} — "${currentDeal.song_title}"</strong>`
+  document.getElementById('video-link-input').value = ''
+  openModal('modal-video-link')
+}
+
+async function submitVideoLink() {
+  const link = document.getElementById('video-link-input').value.trim()
+  if (!link) { showToast('❗ Ange TikTok-länken till din video'); return }
+  if (!pendingDealId) return
+  const { error } = await sb.from('deals').update({ video_link: link }).eq('id', pendingDealId)
+  if (error) { showToast('❌ ' + error.message); return }
+  showToast('🎬 Video sparad! Status är nu Pågående.')
+  closeModal('modal-video-link')
+  pendingDealId = null
   showPage('home')
 }
 
@@ -925,8 +1025,57 @@ async function loadMilestones() {
     return
   }
   creatorDeals = deals
-  const { data: existingMs } = await sb.from('milestones').select('*').eq('creator_id', currentCreator.id)
-  container.innerHTML = deals.map(d => {
+  const { data: existingMs } = await sb.from('milestones').select('*').eq('creator_id', currentCreator.id).order('created_at', { ascending: false })
+
+  // Summary bar at top
+  const allMs = existingMs || []
+  const approved = allMs.filter(m => m.status === 'godkänd' || m.status === 'utbetald')
+  const waiting = allMs.filter(m => m.status === 'väntar')
+  const rejected = allMs.filter(m => m.status === 'avvisad')
+  const earnedTotal = approved.reduce((s, m) => s + m.amount, 0)
+  const pendingTotal = waiting.reduce((s, m) => s + m.amount, 0)
+
+  let summaryHtml = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+    <div class="stat-card" style="text-align:center;">
+      <div class="stat-label">Godkänt</div>
+      <div class="stat-val" style="color:var(--green);font-size:20px;">${earnedTotal} kr</div>
+    </div>
+    <div class="stat-card" style="text-align:center;">
+      <div class="stat-label">Väntar granskning</div>
+      <div class="stat-val" style="color:var(--yellow);font-size:20px;">${pendingTotal} kr</div>
+    </div>
+    <div class="stat-card" style="text-align:center;">
+      <div class="stat-label">Inlämningar</div>
+      <div class="stat-val" style="font-size:20px;">${allMs.length} st</div>
+    </div>
+  </div>`
+
+  // Recent submissions list
+  if (allMs.length > 0) {
+    summaryHtml += `<div class="card" style="margin-bottom:20px;">
+      <div class="card-header"><div class="card-title">Mina inlämningar</div></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Kampanj</th><th>Visningar</th><th>Belopp</th><th>Status</th></tr></thead>
+        <tbody>${allMs.map(m => {
+          const deal = deals.find(d => d.campaign_id === m.campaign_id)
+          const campName = deal?.campaigns ? deal.campaigns.artist_name + ' — "' + deal.campaigns.song_title + '"' : '–'
+          let badge = ''
+          if (m.status === 'godkänd') badge = '<span class="badge badge-active">✅ Godkänd</span>'
+          else if (m.status === 'utbetald') badge = '<span class="badge badge-active">💸 Utbetald</span>'
+          else if (m.status === 'väntar') badge = '<span class="badge badge-pending">⏳ Granskas</span>'
+          else if (m.status === 'avvisad') badge = '<span class="badge badge-red">❌ Avvisad</span>'
+          return `<tr>
+            <td class="td-bold">${campName}</td>
+            <td>${m.views.toLocaleString('sv')}</td>
+            <td class="td-money">+${m.amount} kr</td>
+            <td>${badge}</td>
+          </tr>`
+        }).join('')}</tbody>
+      </table></div>
+    </div>`
+  }
+
+  const campaignCards = deals.map(d => {
     const c = d.campaigns
     const myMs = existingMs ? existingMs.filter(m => m.campaign_id === d.campaign_id) : []
     const levels = MS_LEVELS.map(views => {
@@ -934,8 +1083,9 @@ async function loadMilestones() {
       const existing = myMs.find(m => m.views === views)
       let circleClass = '', circleText = '○', descText = 'Tryck när du nått hit', amountClass = 'locked'
       if (existing) {
-        if (existing.status === 'godkänd') { circleClass = 'done'; circleText = '✓'; descText = 'Godkänt av Snowball ✅'; amountClass = '' }
-        else { circleClass = 'waiting'; circleText = '⏳'; descText = 'Väntar på Snowball'; amountClass = '' }
+        if (existing.status === 'godkänd' || existing.status === 'utbetald') { circleClass = 'done'; circleText = '✓'; descText = 'Godkänt av Snowball ✅'; amountClass = '' }
+        else if (existing.status === 'avvisad') { circleClass = ''; circleText = '✕'; descText = 'Avvisad — kontakta Snowball'; amountClass = 'locked' }
+        else { circleClass = 'waiting'; circleText = '⏳'; descText = 'Väntar granskning (inom 24h)'; amountClass = '' }
       }
       const clickable = !existing ? `onclick="openMilestoneModal('${d.campaign_id}', ${views}, ${c.rate_per_1000}, ${c.max_per_creator}, '${c.artist_name}', '${c.song_title}')"` : ''
       return `<div class="ms-row" style="${!existing ? 'cursor:pointer;' : ''}" ${clickable}>
@@ -949,6 +1099,8 @@ async function loadMilestones() {
       <div>${levels}</div>
     </div>`
   }).join('')
+
+  container.innerHTML = summaryHtml + campaignCards
 }
 
 function openMilestoneModal(campaignId, views, rate, maxPay, artist, song) {
@@ -967,6 +1119,47 @@ async function submitMilestone() {
   showToast('✅ Inbockat! Snowball granskar inom 24h.')
   closeModal('modal-milestone')
   loadMilestones()
+}
+
+// ── INCOME ──
+async function loadIncome() {
+  if (!currentCreator) return
+  const { data: ms } = await sb.from('milestones').select('*, campaigns(artist_name,song_title)').eq('creator_id', currentCreator.id).order('created_at', { ascending: false })
+  const allMs = ms || []
+  const earned = allMs.filter(m => m.status === 'godkänd' || m.status === 'utbetald').reduce((s, m) => s + m.amount, 0)
+  const pending = allMs.filter(m => m.status === 'väntar').reduce((s, m) => s + m.amount, 0)
+  const deals = await sb.from('deals').select('id').eq('creator_id', currentCreator.id)
+
+  // Update stat cards
+  const statCards = document.querySelectorAll('#page-income .stats-row .stat-card')
+  if (statCards[0]) statCards[0].querySelector('.stat-val').textContent = earned + ' kr'
+  if (statCards[1]) statCards[1].querySelector('.stat-val').textContent = pending + ' kr'
+  if (statCards[2]) statCards[2].querySelector('.stat-val').textContent = (earned + pending) + ' kr'
+  if (statCards[3]) statCards[3].querySelector('.stat-val').textContent = (deals.data?.length || 0) + ' st'
+
+  const tableEl = document.getElementById('income-table')
+  if (!allMs.length) {
+    tableEl.innerHTML = '<div class="empty-state"><div class="es-icon">💰</div><div class="es-title">Inga transaktioner ännu</div><div class="es-sub">Godkända milstolpar visas här.</div></div>'
+    return
+  }
+  tableEl.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Kampanj</th><th>Visningar</th><th>Belopp</th><th>Status</th><th>Datum</th></tr></thead>
+    <tbody>${allMs.map(m => {
+      let badge = ''
+      if (m.status === 'godkänd') badge = '<span class="badge badge-active">✅ Godkänd</span>'
+      else if (m.status === 'utbetald') badge = '<span class="badge badge-active">💸 Utbetald</span>'
+      else if (m.status === 'väntar') badge = '<span class="badge badge-pending">⏳ Granskas</span>'
+      else if (m.status === 'avvisad') badge = '<span class="badge badge-red">❌ Avvisad</span>'
+      const campName = m.campaigns ? m.campaigns.artist_name + ' — "' + m.campaigns.song_title + '"' : '–'
+      return `<tr>
+        <td class="td-bold">${campName}</td>
+        <td>${m.views.toLocaleString('sv')}</td>
+        <td class="td-money">+${m.amount} kr</td>
+        <td>${badge}</td>
+        <td class="td-muted">${new Date(m.created_at).toLocaleDateString('sv')}</td>
+      </tr>`
+    }).join('')}</tbody>
+  </table></div>`
 }
 
 // ── PROFILE ──
@@ -1008,19 +1201,25 @@ async function sendCreatorMsg() {
 
 // ── ADMIN HOME ──
 async function loadAdminHome() {
-  const [{ data: cams }, { data: creators }, { data: ms }] = await Promise.all([
+  const [{ data: cams }, { data: creators }, { data: ms }, { data: paidMs }] = await Promise.all([
     sb.from('campaigns').select('id,artist_name,song_title,budget_remaining,budget_total,active'),
     sb.from('creators').select('id'),
-    sb.from('milestones').select('*,creator_id,campaign_id').eq('status', 'väntar')
+    sb.from('milestones').select('*,creator_id,campaign_id').eq('status', 'väntar'),
+    sb.from('milestones').select('amount,status').in('status', ['godkänd', 'utbetald'])
   ])
   const active = cams ? cams.filter(c => c.active).length : 0
   document.getElementById('admin-stat-campaigns').textContent = active
   document.getElementById('admin-stat-creators').textContent = creators ? creators.length : 0
   document.getElementById('admin-stat-pending').textContent = ms ? ms.length : 0
+  const totalApproved = paidMs ? paidMs.reduce((s, m) => s + m.amount, 0) : 0
+  document.getElementById('admin-stat-cut').textContent = Math.round(totalApproved * 0.1) + ' kr'
   if (ms && ms.length > 0) {
     const badge = document.getElementById('verify-badge')
     badge.style.display = 'inline'
     badge.textContent = ms.length
+  } else {
+    const badge = document.getElementById('verify-badge')
+    badge.style.display = 'none'
   }
   // Campaigns table
   const tbody = document.getElementById('admin-campaigns-tbody')
@@ -1207,11 +1406,45 @@ async function toggleCampaign(id, currentlyActive) {
 
 // ── ADMIN PAYOUTS ──
 async function loadAdminPayouts() {
-  const { data } = await sb.from('milestones').select('amount,status').eq('status', 'godkänd')
-  const total = data ? data.reduce((s, m) => s + m.amount, 0) : 0
-  document.getElementById('payout-total').textContent = total + ' kr'
+  const { data: allMs } = await sb.from('milestones').select('*, creators(name,email), campaigns(artist_name,song_title)').in('status', ['godkänd', 'utbetald']).order('created_at', { ascending: false })
+  const ms = allMs || []
+  const paid = ms.filter(m => m.status === 'utbetald').reduce((s, m) => s + m.amount, 0)
+  const approved = ms.filter(m => m.status === 'godkänd').reduce((s, m) => s + m.amount, 0)
+  const total = paid + approved
+  document.getElementById('payout-total').textContent = paid + ' kr'
   document.getElementById('payout-cut').textContent = Math.round(total * 0.1) + ' kr'
+  document.getElementById('payout-pending').textContent = approved + ' kr'
   document.getElementById('admin-stat-cut').textContent = Math.round(total * 0.1) + ' kr'
+
+  const tableEl = document.getElementById('payouts-table')
+  if (!ms.length) {
+    tableEl.innerHTML = '<div class="empty-state"><div class="es-icon">💸</div><div class="es-title">Inga utbetalningar ännu</div></div>'
+    return
+  }
+  tableEl.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Kreatör</th><th>Kampanj</th><th>Visningar</th><th>Belopp</th><th>Betalstatus</th><th></th></tr></thead>
+    <tbody id="payouts-tbody">${ms.map(m => {
+      const name = m.creators?.name || '–'
+      const email = m.creators?.email || ''
+      const camp = m.campaigns ? m.campaigns.artist_name + ' — "' + m.campaigns.song_title + '"' : '–'
+      const isPaid = m.status === 'utbetald'
+      return `<tr id="payout-row-${m.id}">
+        <td><div class="td-bold">${name}</div><div class="td-muted" style="font-size:12px;">${email}</div></td>
+        <td>${camp}</td>
+        <td>${m.views.toLocaleString('sv')}</td>
+        <td class="td-money">+${m.amount} kr</td>
+        <td>${isPaid ? '<span class="badge badge-active">💸 Utbetald</span>' : '<span class="badge badge-pending">⏳ Ej utbetald</span>'}</td>
+        <td>${isPaid ? '' : `<button class="btn btn-success btn-sm" onclick="markAsPaid('${m.id}', '${name}', ${m.amount})">Markera utbetald</button>`}</td>
+      </tr>`
+    }).join('')}</tbody>
+  </table></div>`
+}
+
+async function markAsPaid(id, name, amount) {
+  const { error } = await sb.from('milestones').update({ status: 'utbetald' }).eq('id', id)
+  if (error) { showToast('❌ ' + error.message); return }
+  showToast(`💸 ${amount} kr markerat som utbetalt till ${name}`)
+  loadAdminPayouts()
 }
 
 // ── UTILS ──
