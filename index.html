@@ -383,7 +383,7 @@
         <div class="landing-form">
           <input class="landing-input" id="reg-name" placeholder="Ditt namn" />
           <input class="landing-input" id="reg-email" type="email" placeholder="E-post" />
-          <input class="landing-input" id="reg-tiktok" placeholder="TikTok @handle (valfritt)" />
+          <input class="landing-input" id="reg-tiktok" placeholder="TikTok @handle (t.ex. @dittnamn)" />
           <input class="landing-input" id="reg-password" type="password" placeholder="Välj lösenord" />
           <input class="landing-input" id="reg-password2" type="password" placeholder="Bekräfta lösenord" onkeypress="if(event.key==='Enter')doRegister()" />
         </div>
@@ -880,11 +880,13 @@ async function doLogin() {
 async function doRegister() {
   const name = document.getElementById('reg-name').value.trim()
   const email = document.getElementById('reg-email').value.trim()
-  const tiktok = document.getElementById('reg-tiktok').value.trim()
+  let tiktok = document.getElementById('reg-tiktok').value.trim()
   const pw = document.getElementById('reg-password').value
   const pw2 = document.getElementById('reg-password2').value
   if (!name) { showToast('❗ Ange ditt namn'); return }
   if (!email) { showToast('❗ Ange din e-post'); return }
+  if (!tiktok) { showToast('❗ Ange ditt TikTok-handle'); return }
+  if (!tiktok.startsWith('@')) tiktok = '@' + tiktok
   if (!pw) { showToast('❗ Välj ett lösenord'); return }
   if (pw !== pw2) { showToast('❌ Lösenorden matchar inte'); return }
   if (pw.length < 6) { showToast('❗ Lösenordet måste vara minst 6 tecken'); return }
@@ -893,7 +895,7 @@ async function doRegister() {
   const { data: existing } = await sb.from('creators').select('*').eq('email', email).maybeSingle()
   if (existing) { btn.disabled = false; btn.textContent = 'Skapa konto →'; showToast('✅ Konto finns redan! Logga in istället.'); switchTab('login'); document.getElementById('login-email').value = email; return }
   const password_hash = await hashPw(pw)
-  const { data, error } = await sb.from('creators').insert({ name, email, tiktok_handle: tiktok || null, password_hash }).select().single()
+  const { data, error } = await sb.from('creators').insert({ name, email, tiktok_handle: tiktok, password_hash }).select().single()
   btn.disabled = false; btn.textContent = 'Skapa konto →'
   if (error) { showToast('❌ ' + error.message); return }
   currentCreator = data
@@ -1287,7 +1289,13 @@ async function loadIncome() {
 async function loadProfile() {
   if (!currentCreator) return
   document.getElementById('profile-name').textContent = currentCreator.name
-  document.getElementById('profile-handle').textContent = currentCreator.tiktok_handle ? '@' + currentCreator.tiktok_handle : currentCreator.email
+  const handle = currentCreator.tiktok_handle ? currentCreator.tiktok_handle.replace(/^@/, '') : null
+  const handleEl = document.getElementById('profile-handle')
+  if (handle) {
+    handleEl.innerHTML = `<a href="https://www.tiktok.com/@${handle}" target="_blank" style="color:var(--brand);text-decoration:none;">@${handle} ↗</a>`
+  } else {
+    handleEl.textContent = currentCreator.email
+  }
   document.getElementById('profile-price').textContent = (currentCreator.price || 300) + ' kr'
   const { data: deals } = await sb.from('deals').select('id').eq('creator_id', currentCreator.id)
   document.getElementById('profile-deals').textContent = deals ? deals.length : 0
@@ -1486,7 +1494,7 @@ function renderCreators(data) {
   tbody.innerHTML = data.map(c => `<tr>
     <td><input type="checkbox" class="creator-checkbox" data-id="${c.id}" onchange="updateSelectedCount()"></td>
     <td><div style="display:flex;align-items:center;gap:10px;"><div style="font-size:18px;">👤</div><div class="td-bold">${c.name}</div></div></td>
-    <td class="td-muted">${c.tiktok_handle ? '@' + c.tiktok_handle : '–'}</td>
+    <td class="td-muted">${c.tiktok_handle ? `<a href="https://www.tiktok.com/@${c.tiktok_handle.replace(/^@/,'')}" target="_blank" style="color:var(--brand);text-decoration:none;">@${c.tiktok_handle.replace(/^@/,'')} ↗</a>` : '–'}</td>
     <td>${c.genre || '–'}</td>
     <td>${c.followers ? c.followers.toLocaleString('sv') : '–'}</td>
     <td>${c.price || 300} kr</td>
