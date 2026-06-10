@@ -40,6 +40,11 @@
   .btn-enter { width: 100%; background: var(--brand); color: white; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; }
   .btn-enter:hover { background: var(--brand-dark); }
   .btn-enter:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-tiktok { width: 100%; background: #010101; color: white; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background 0.15s; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px; }
+  .btn-tiktok:hover { background: #333; }
+  .auth-divider { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; color: rgba(255,255,255,0.3); font-size: 12px; }
+  .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.15); }
+  .auth-divider span { white-space: nowrap; }
   .landing-back { margin-top: 12px; font-size: 12px; color: rgba(255,255,255,0.3); cursor: pointer; }
   .landing-back:hover { color: rgba(255,255,255,0.6); }
   .admin-dot { margin-top: 28px; font-size: 11px; color: rgba(255,255,255,0.08); cursor: pointer; user-select: none; }
@@ -375,6 +380,11 @@
       </div>
       <!-- Logga in -->
       <div id="form-login">
+        <button class="btn-tiktok" onclick="initTikTokOAuth()">
+          <svg width="18" height="18" viewBox="0 0 48 48" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M38.4 20.7c-3.7 0-7-1.2-9.7-3.2v14.5c0 7.2-5.8 13-13 13s-13-5.8-13-13 5.8-13 13-13c.7 0 1.4.1 2.1.2v7.1c-.7-.2-1.4-.3-2.1-.3-3.4 0-6.1 2.7-6.1 6.1s2.7 6.1 6.1 6.1 6.1-2.7 6.1-6.1V5h7c.6 5.3 5 9.5 10.6 9.7v6z"/></svg>
+          Logga in med TikTok
+        </button>
+        <div class="auth-divider"><span>eller med e-post</span></div>
         <div class="landing-form">
           <input class="landing-input" id="login-email" type="email" placeholder="Din e-post" />
           <input class="landing-input" id="login-password" type="password" placeholder="Lösenord" onkeypress="if(event.key==='Enter')doLogin()" />
@@ -383,6 +393,11 @@
       </div>
       <!-- Skapa konto -->
       <div id="form-register" style="display:none;">
+        <button class="btn-tiktok" onclick="initTikTokOAuth()">
+          <svg width="18" height="18" viewBox="0 0 48 48" fill="white" xmlns="http://www.w3.org/2000/svg"><path d="M38.4 20.7c-3.7 0-7-1.2-9.7-3.2v14.5c0 7.2-5.8 13-13 13s-13-5.8-13-13 5.8-13 13-13c.7 0 1.4.1 2.1.2v7.1c-.7-.2-1.4-.3-2.1-.3-3.4 0-6.1 2.7-6.1 6.1s2.7 6.1 6.1 6.1 6.1-2.7 6.1-6.1V5h7c.6 5.3 5 9.5 10.6 9.7v6z"/></svg>
+          Registrera med TikTok
+        </button>
+        <div class="auth-divider"><span>eller med e-post</span></div>
         <div class="landing-form">
           <input class="landing-input" id="reg-name" placeholder="Ditt namn" />
           <input class="landing-input" id="reg-email" type="email" placeholder="E-post" />
@@ -862,6 +877,99 @@ async function hashPw(pw) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw))
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('')
 }
+
+// ── TikTok OAuth ──────────────────────────────────────────
+const TIKTOK_CLIENT_KEY = 'awj3j59qm035vacm'
+const TIKTOK_REDIRECT_URI = 'https://snowball-app.netlify.app/'
+
+function initTikTokOAuth() {
+  const state = Math.random().toString(36).substring(2, 18)
+  sessionStorage.setItem('tiktok_oauth_state', state)
+  const params = new URLSearchParams({
+    client_key: TIKTOK_CLIENT_KEY,
+    response_type: 'code',
+    scope: 'user.info.basic,user.info.stats,video.list',
+    redirect_uri: TIKTOK_REDIRECT_URI,
+    state: state
+  })
+  window.location.href = `https://www.tiktok.com/v2/auth/authorize/?${params.toString()}`
+}
+
+async function handleTikTokCallback() {
+  const params = new URLSearchParams(window.location.search)
+  const code = params.get('code')
+  const state = params.get('state')
+  const error = params.get('error')
+
+  if (!code) return // Not a TikTok callback
+
+  // Clean URL
+  window.history.replaceState({}, document.title, '/')
+
+  if (error) {
+    showToast('❗ TikTok-inloggning avbröts')
+    return
+  }
+
+  const savedState = sessionStorage.getItem('tiktok_oauth_state')
+  if (state && savedState && state !== savedState) {
+    showToast('❗ Säkerhetsfel – försök igen')
+    return
+  }
+  sessionStorage.removeItem('tiktok_oauth_state')
+
+  showToast('⏳ Loggar in med TikTok...')
+
+  try {
+    const res = await fetch('/.netlify/functions/tiktok-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: TIKTOK_REDIRECT_URI })
+    })
+    const data = await res.json()
+
+    if (data.error) {
+      showToast('❗ ' + data.error)
+      return
+    }
+
+    const { access_token, open_id, user } = data
+    const displayName = user.display_name || user.username || 'TikTok-användare'
+    const tiktokHandle = user.username ? '@' + user.username : ''
+
+    // Check if creator with this TikTok open_id already exists
+    let { data: existing } = await sb.from('creators').select('*').eq('tiktok_open_id', open_id).maybeSingle()
+
+    if (existing) {
+      // Update access token and log in
+      await sb.from('creators').update({ tiktok_access_token: access_token }).eq('id', existing.id)
+      currentCreator = { ...existing, tiktok_access_token: access_token }
+      showToast('✅ Välkommen tillbaka, ' + (existing.name || displayName) + '!')
+      launchCreatorApp()
+    } else {
+      // Create new creator
+      const newCreator = {
+        name: displayName,
+        email: '',
+        tiktok_handle: tiktokHandle,
+        password_hash: '',
+        tiktok_open_id: open_id,
+        tiktok_access_token: access_token
+      }
+      const { data: created, error: createErr } = await sb.from('creators').insert([newCreator]).select().single()
+      if (createErr) {
+        showToast('❗ Kunde inte skapa konto: ' + createErr.message)
+        return
+      }
+      currentCreator = created
+      showToast('✅ Välkommen, ' + displayName + '! Konto skapat.')
+      launchCreatorApp()
+    }
+  } catch (err) {
+    showToast('❗ Fel: ' + err.message)
+  }
+}
+// ─────────────────────────────────────────────────────────
 
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim()
@@ -1717,6 +1825,9 @@ async function sendInvites() {
   document.querySelectorAll('.creator-checkbox').forEach(cb => cb.checked = false)
   updateSelectedCount()
 }
+
+// Run TikTok OAuth callback handler on page load
+handleTikTokCallback()
 
 // ── UTILS ──
 function showToast(msg) {
