@@ -93,6 +93,9 @@
 
   /* BADGES */
   .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; }
+  .genre-chip { padding: 6px 14px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.05); color: var(--sub); font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .genre-chip:hover { border-color: var(--brand); color: #fff; }
+  .genre-chip.selected { background: rgba(108,71,255,0.2); border-color: var(--brand); color: #fff; font-weight: 600; }
   .badge-active { background: var(--green-bg); color: var(--green); }
   .badge-pending { background: var(--yellow-bg); color: var(--yellow); }
   .badge-done { background: var(--brand-dim); color: var(--brand); }
@@ -619,17 +622,16 @@
             <div class="card">
               <div class="card-header"><div class="card-title">Musikprofil &amp; Betalning</div></div>
               <div class="form-group">
-                <label class="form-label">Favoritgenre</label>
-                <select class="form-input" id="profile-genre">
-                  <option value="">Välj genre</option>
-                  <option value="pop">Pop</option>
-                  <option value="hiphop">Hip-Hop / Rap</option>
-                  <option value="rnb">R&amp;B / Soul</option>
-                  <option value="dance">Dance / EDM</option>
-                  <option value="latin">Latin</option>
-                  <option value="rock">Rock / Indie</option>
-                  <option value="afrobeats">Afrobeats</option>
-                </select>
+                <label class="form-label">Favoritgenre <span style="font-size:11px;color:var(--sub);font-weight:400;">(välj flera)</span></label>
+                <div id="genre-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+                  <button type="button" class="genre-chip" data-genre="pop" onclick="toggleGenre(this)">Pop</button>
+                  <button type="button" class="genre-chip" data-genre="hiphop" onclick="toggleGenre(this)">Hip-Hop / Rap</button>
+                  <button type="button" class="genre-chip" data-genre="rnb" onclick="toggleGenre(this)">R&amp;B / Soul</button>
+                  <button type="button" class="genre-chip" data-genre="dance" onclick="toggleGenre(this)">Dance / EDM</button>
+                  <button type="button" class="genre-chip" data-genre="latin" onclick="toggleGenre(this)">Latin</button>
+                  <button type="button" class="genre-chip" data-genre="rock" onclick="toggleGenre(this)">Rock / Indie</button>
+                  <button type="button" class="genre-chip" data-genre="afrobeats" onclick="toggleGenre(this)">Afrobeats</button>
+                </div>
               </div>
               <div class="form-group">
                 <label class="form-label">Frilans Finans ID</label>
@@ -1300,14 +1302,21 @@ async function loadProfile() {
   const { data: deals } = await sb.from('deals').select('id').eq('creator_id', currentCreator.id)
   document.getElementById('profile-deals').textContent = deals ? deals.length : 0
   // Feature 4: fill genre and FF-ID
-  const genreEl = document.getElementById('profile-genre')
-  if (genreEl) genreEl.value = currentCreator.genre || ''
+  // Restore genre chips
+  const savedGenres = (currentCreator.genre || '').split(',').map(g => g.trim()).filter(Boolean)
+  document.querySelectorAll('.genre-chip').forEach(chip => {
+    chip.classList.toggle('selected', savedGenres.includes(chip.dataset.genre))
+  })
   const ffEl = document.getElementById('profile-ff-id')
   if (ffEl) ffEl.value = currentCreator.frilans_finans_id || ''
 }
 
+function toggleGenre(chip) {
+  chip.classList.toggle('selected')
+}
+
 async function saveProfile() {
-  const genre = document.getElementById('profile-genre').value
+  const genre = Array.from(document.querySelectorAll('.genre-chip.selected')).map(c => c.dataset.genre).join(',')
   const ffId = document.getElementById('profile-ff-id').value.trim()
   const { error } = await sb.from('creators').update({ genre, frilans_finans_id: ffId || null }).eq('id', currentCreator.id)
   if (error) { showToast('❌ ' + error.message); return }
@@ -1495,7 +1504,7 @@ function renderCreators(data) {
     <td><input type="checkbox" class="creator-checkbox" data-id="${c.id}" onchange="updateSelectedCount()"></td>
     <td><div style="display:flex;align-items:center;gap:10px;"><div style="font-size:18px;">👤</div><div class="td-bold">${c.name}</div></div></td>
     <td class="td-muted">${c.tiktok_handle ? `<a href="https://www.tiktok.com/@${c.tiktok_handle.replace(/^@/,'')}" target="_blank" style="color:var(--brand);text-decoration:none;">@${c.tiktok_handle.replace(/^@/,'')} ↗</a>` : '–'}</td>
-    <td>${c.genre || '–'}</td>
+    <td style="font-size:12px;">${c.genre ? c.genre.split(',').map(g => `<span style="display:inline-block;background:rgba(108,71,255,0.15);border:1px solid var(--brand);color:#fff;border-radius:10px;padding:1px 7px;margin:1px;">${g.trim()}</span>`).join('') : '–'}</td>
     <td>${c.followers ? c.followers.toLocaleString('sv') : '–'}</td>
     <td>${c.price || 300} kr</td>
     <td class="td-muted">${new Date(c.created_at).toLocaleDateString('sv')}</td>
@@ -1508,7 +1517,8 @@ function filterCreators(q) {
   const genre = document.getElementById('genre-filter')?.value || ''
   const filtered = allCreators.filter(c => {
     const matchQ = !query || c.name.toLowerCase().includes(query) || (c.tiktok_handle||'').toLowerCase().includes(query)
-    const matchGenre = !genre || c.genre === genre
+    const creatorGenres = (c.genre || '').split(',').map(g => g.trim())
+    const matchGenre = !genre || creatorGenres.includes(genre)
     return matchQ && matchGenre
   })
   renderCreators(filtered)
