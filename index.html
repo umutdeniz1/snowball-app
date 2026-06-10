@@ -264,6 +264,13 @@
       <div class="form-group"><label class="form-label">Kampanjlängd</label><select class="form-select" id="camp-length"><option>30 dagar</option><option>60 dagar</option><option>90 dagar</option></select></div>
     </div>
     <div class="form-group"><label class="form-label">Krav på videon (en per rad, valfritt)</label><textarea class="form-input" id="camp-req" rows="3" placeholder="Använd originalljudet&#10;Videon ska vara 15–60 sek&#10;Dance eller lifestyle-tema" style="resize:vertical;"></textarea></div>
+    <div class="form-group">
+      <label class="form-label">Deltagandemodell</label>
+      <select class="form-input" id="c-participation">
+        <option value="multiple">Obegränsat — kreatörer bockar in milstolpar</option>
+        <option value="single">En video per kreatör — Snowball följer visningar</option>
+      </select>
+    </div>
     <div style="display:flex;gap:10px;margin-top:4px;">
       <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('modal-campaign')">Avbryt</button>
       <button class="btn btn-primary" style="flex:2;" onclick="createCampaign()">Publicera kampanj</button>
@@ -306,6 +313,29 @@
     <div style="display:flex;gap:10px;">
       <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('modal-milestone')">Avbryt</button>
       <button class="btn btn-primary" style="flex:2;" onclick="submitMilestone()">Skicka in →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: SKICKA KAMPANJERBJUDANDE -->
+<div class="modal-overlay" id="modal-invite">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-top">
+      <div class="modal-title">📨 Skicka kampanjerbjudande</div>
+      <button class="modal-close" onclick="closeModal('modal-invite')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--sub);margin-bottom:16px;">Välj kampanj och skriv ett meddelande. Skickas som Snowball-meddelande till varje vald kreatör.</p>
+    <div class="form-group">
+      <label class="form-label">Kampanj</label>
+      <select class="form-input" id="invite-campaign"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Meddelande</label>
+      <textarea class="form-input" id="invite-msg" rows="3" style="resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('modal-invite')">Avbryt</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="sendInvites()">Skicka →</button>
     </div>
   </div>
 </div>
@@ -583,6 +613,27 @@
                 <div style="padding:12px 0;display:flex;justify-content:space-between;cursor:pointer;font-size:13.5px;color:var(--red);" onclick="location.reload()"><span>Logga ut</span><span>→</span></div>
               </div>
             </div>
+            <div class="card">
+              <div class="card-header"><div class="card-title">Musikprofil &amp; Betalning</div></div>
+              <div class="form-group">
+                <label class="form-label">Favoritgenre</label>
+                <select class="form-input" id="profile-genre">
+                  <option value="">Välj genre</option>
+                  <option value="pop">Pop</option>
+                  <option value="hiphop">Hip-Hop / Rap</option>
+                  <option value="rnb">R&amp;B / Soul</option>
+                  <option value="dance">Dance / EDM</option>
+                  <option value="latin">Latin</option>
+                  <option value="rock">Rock / Indie</option>
+                  <option value="afrobeats">Afrobeats</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Frilans Finans ID</label>
+                <input class="form-input" id="profile-ff-id" placeholder="T.ex. FF-123456" />
+              </div>
+              <button class="btn btn-primary" style="width:100%;" onclick="saveProfile()">Spara →</button>
+            </div>
           </div>
         </div>
       </div>
@@ -640,11 +691,12 @@
           <div class="header-actions"><button class="btn btn-primary" onclick="openModal('modal-campaign')">+ Ny kampanj</button></div>
         </div>
         <div class="content">
-          <div class="stats-row">
+          <div class="stats-row" style="grid-template-columns:repeat(5,1fr);">
             <div class="stat-card"><div class="stat-label">Aktiva kampanjer</div><div class="stat-val" id="admin-stat-campaigns">–</div></div>
             <div class="stat-card"><div class="stat-label">Registrerade kreatörer</div><div class="stat-val" id="admin-stat-creators">–</div></div>
             <div class="stat-card"><div class="stat-label">Väntar granskning</div><div class="stat-val warn" id="admin-stat-pending" style="color:var(--yellow);">–</div></div>
             <div class="stat-card"><div class="stat-label">Snowball cut (10%)</div><div class="stat-val" id="admin-stat-cut" style="color:var(--green);">0 kr</div></div>
+            <div class="stat-card"><div class="stat-label">Snitt visningar/video</div><div class="stat-val" id="admin-stat-avgviews" style="color:var(--brand);">–</div></div>
           </div>
           <div class="grid-2">
             <div class="card">
@@ -672,10 +724,29 @@
         </div>
         <div class="content">
           <div class="card">
+            <div class="card-header">
+              <div class="card-title">Kreatörer <span id="selected-count" style="color:var(--brand);font-size:12px;display:none;"></span></div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-primary btn-sm" id="invite-btn" onclick="openInviteModal()" style="display:none;">📨 Skicka erbjudande</button>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;">
+              <select id="genre-filter" class="form-input" style="width:160px;" onchange="filterCreators('')">
+                <option value="">Alla genrer</option>
+                <option value="pop">Pop</option>
+                <option value="hiphop">Hip-Hop / Rap</option>
+                <option value="rnb">R&amp;B / Soul</option>
+                <option value="dance">Dance / EDM</option>
+                <option value="latin">Latin</option>
+                <option value="rock">Rock / Indie</option>
+                <option value="afrobeats">Afrobeats</option>
+              </select>
+              <span style="font-size:12px;color:var(--sub);" id="creators-count"></span>
+            </div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>Kreatör</th><th>TikTok</th><th>Följare</th><th>Pris / ad</th><th>Registrerad</th><th></th></tr></thead>
-                <tbody id="creators-tbody"><tr><td colspan="6" class="td-muted" style="padding:20px;text-align:center;">Laddar...</td></tr></tbody>
+                <thead><tr><th style="width:32px;"><input type="checkbox" id="select-all-creators" onchange="toggleSelectAll(this.checked)"></th><th>Kreatör</th><th>TikTok</th><th>Genre</th><th>Följare</th><th>Pris / ad</th><th>Registrerad</th><th></th></tr></thead>
+                <tbody id="creators-tbody"><tr><td colspan="8" class="td-muted" style="padding:20px;text-align:center;">Laddar...</td></tr></tbody>
               </table>
             </div>
           </div>
@@ -755,6 +826,7 @@ let pendingMsData = null // for milestone modal
 let chatCreatorId = null
 let chatCreatorName = ''
 let allCreators = []
+let selectedCreatorIds = []
 
 // ── LANDING ──
 function selectRole(role) {
@@ -874,7 +946,7 @@ function showPage(id) {
 async function loadCreatorHome() {
   if (!currentCreator) return
   document.getElementById('home-greeting').textContent = 'Hej, ' + currentCreator.name.split(' ')[0] + ' 👋'
-  const { data: deals } = await sb.from('deals').select('id, video_link, campaigns(artist_name, song_title)').eq('creator_id', currentCreator.id)
+  const { data: deals } = await sb.from('deals').select('id, video_link, video_submitted_at, campaigns(artist_name, song_title)').eq('creator_id', currentCreator.id)
   const tbody = document.getElementById('home-campaigns')
   if (!deals || deals.length === 0) {
     tbody.innerHTML = `<tr><td colspan="3" style="padding:24px;text-align:center;color:var(--sub);">Inga kampanjer ännu. <span style="color:var(--brand);cursor:pointer;" onclick="showPage('deals')">Hitta deals →</span></td></tr>`
@@ -885,7 +957,7 @@ async function loadCreatorHome() {
       const hasvideo = d.video_link && d.video_link.length > 0
       const badge = hasvideo
         ? '<span class="badge badge-active">🎬 Pågående</span>'
-        : '<span class="badge badge-pending">📎 Lägg till video</span>'
+        : '<span class="badge badge-pending">⭐ Intresserad</span>'
       return `<tr>
         <td class="td-bold">${d.campaigns?.artist_name || '–'} — "${d.campaigns?.song_title || '–'}"</td>
         <td>${badge}</td>
@@ -893,6 +965,21 @@ async function loadCreatorHome() {
       </tr>`
     }).join('')
   }
+  // Feature 2: 1-week notice for old videos
+  const weekOldDeals = (deals || []).filter(d => d.video_link && d.video_submitted_at &&
+    (Date.now() - new Date(d.video_submitted_at).getTime()) > 7 * 24 * 60 * 60 * 1000)
+  const weekNoticeEl = document.getElementById('week-notice')
+  if (weekNoticeEl) weekNoticeEl.remove()
+  if (weekOldDeals.length > 0) {
+    const noticeDiv = document.createElement('div')
+    noticeDiv.id = 'week-notice'
+    noticeDiv.style.cssText = 'background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;'
+    const campName = weekOldDeals[0].campaigns?.artist_name || 'din kampanj'
+    noticeDiv.innerHTML = `⏰ <strong>Dags att bocka in visningar!</strong> Din video för ${campName} är 7+ dagar gammal. <span style="color:var(--brand);cursor:pointer;" onclick="showPage('milestones')">Bocka in nu →</span>`
+    const statsRow = document.querySelector('#page-home .content .stats-row')
+    if (statsRow) statsRow.parentNode.insertBefore(noticeDiv, statsRow)
+  }
+
   // Load milestones for earnings
   const { data: ms } = await sb.from('milestones').select('amount,status').eq('creator_id', currentCreator.id)
   const earned = ms ? ms.filter(m => m.status === 'godkänd' || m.status === 'utbetald').reduce((s, m) => s + m.amount, 0) : 0
@@ -985,17 +1072,19 @@ async function applyToCampaign() {
   const { data: ex } = await sb.from('deals').select('id,video_link').eq('creator_id', currentCreator.id).eq('campaign_id', currentDeal.id).maybeSingle()
   if (ex) {
     if (ex.video_link) { showToast('✅ Du är redan med och har laddat upp din video!'); showPage('home'); return }
-    // Already applied but no video link yet — prompt to add it
-    pendingDealId = ex.id
-    document.getElementById('video-link-modal-info').innerHTML = `<strong>${currentDeal.artist_name} — "${currentDeal.song_title}"</strong>`
-    document.getElementById('video-link-input').value = ''
-    openModal('modal-video-link')
+    showToast('✅ Du är redan anmäld! Lägg till din video från Visningar-sidan.')
+    showPage('home')
     return
   }
   const { data: deal, error } = await sb.from('deals').insert({ creator_id: currentCreator.id, campaign_id: currentDeal.id }).select().single()
   if (error) { showToast('❌ ' + error.message); return }
-  pendingDealId = deal.id
-  document.getElementById('video-link-modal-info').innerHTML = `<strong>${currentDeal.artist_name} — "${currentDeal.song_title}"</strong>`
+  showToast('✅ Du är med! Lägg till din video från Visningar-sidan när du publicerat den.')
+  showPage('home')
+}
+
+function openVideoLinkModal(dealId, campaignName) {
+  pendingDealId = dealId
+  document.getElementById('video-link-modal-info').innerHTML = `<strong>${campaignName}</strong>`
   document.getElementById('video-link-input').value = ''
   openModal('modal-video-link')
 }
@@ -1004,7 +1093,7 @@ async function submitVideoLink() {
   const link = document.getElementById('video-link-input').value.trim()
   if (!link) { showToast('❗ Ange TikTok-länken till din video'); return }
   if (!pendingDealId) return
-  const { error } = await sb.from('deals').update({ video_link: link }).eq('id', pendingDealId)
+  const { error } = await sb.from('deals').update({ video_link: link, video_submitted_at: new Date().toISOString() }).eq('id', pendingDealId)
   if (error) { showToast('❌ ' + error.message); return }
   showToast('🎬 Video sparad! Status är nu Pågående.')
   closeModal('modal-video-link')
@@ -1078,6 +1167,19 @@ async function loadMilestones() {
   const campaignCards = deals.map(d => {
     const c = d.campaigns
     const myMs = existingMs ? existingMs.filter(m => m.campaign_id === d.campaign_id) : []
+
+    // Banner for deals without video link
+    const noBanner = d.video_link ? '' : `<div class="alert alert-yellow" style="margin-bottom:12px;">📎 <strong>Lägg till din TikTok-video</strong> för ${c.artist_name} — "${c.song_title}" <button class="btn btn-primary btn-sm" onclick="openVideoLinkModal('${d.id}', '${(c.artist_name + ' — &quot;' + c.song_title + '&quot;').replace(/'/g, "\\'")}')">Lägg till →</button></div>`
+
+    // Feature 3: participation_type single — no milestone rows
+    if (c.participation_type === 'single') {
+      return `<div class="card">
+        ${noBanner}
+        <div class="card-header"><div><div class="card-title">${c.artist_name} — "${c.song_title}"</div><div style="font-size:12px;color:var(--sub);margin-top:2px;">${c.rate_per_1000} kr / 1 000 vis. · max ${c.max_per_creator} kr</div></div></div>
+        <div class="alert" style="background:var(--brand-dim);color:var(--brand);border-radius:8px;padding:12px;margin-top:8px;">📊 Snowball följer dina visningar automatiskt. Inga manuella inlämningar behövs.</div>
+      </div>`
+    }
+
     const levels = MS_LEVELS.map(views => {
       const amount = Math.min(Math.round(views / 1000 * c.rate_per_1000), c.max_per_creator)
       const existing = myMs.find(m => m.views === views)
@@ -1095,6 +1197,7 @@ async function loadMilestones() {
       </div>`
     }).join('')
     return `<div class="card">
+      ${noBanner}
       <div class="card-header"><div><div class="card-title">${c.artist_name} — "${c.song_title}"</div><div style="font-size:12px;color:var(--sub);margin-top:2px;">${c.rate_per_1000} kr / 1 000 vis. · max ${c.max_per_creator} kr</div></div></div>
       <div>${levels}</div>
     </div>`
@@ -1170,6 +1273,21 @@ async function loadProfile() {
   document.getElementById('profile-price').textContent = (currentCreator.price || 300) + ' kr'
   const { data: deals } = await sb.from('deals').select('id').eq('creator_id', currentCreator.id)
   document.getElementById('profile-deals').textContent = deals ? deals.length : 0
+  // Feature 4: fill genre and FF-ID
+  const genreEl = document.getElementById('profile-genre')
+  if (genreEl) genreEl.value = currentCreator.genre || ''
+  const ffEl = document.getElementById('profile-ff-id')
+  if (ffEl) ffEl.value = currentCreator.frilans_finans_id || ''
+}
+
+async function saveProfile() {
+  const genre = document.getElementById('profile-genre').value
+  const ffId = document.getElementById('profile-ff-id').value.trim()
+  const { error } = await sb.from('creators').update({ genre, frilans_finans_id: ffId || null }).eq('id', currentCreator.id)
+  if (error) { showToast('❌ ' + error.message); return }
+  currentCreator.genre = genre
+  currentCreator.frilans_finans_id = ffId
+  showToast('✅ Profil sparad!')
 }
 
 // ── MESSAGES ──
@@ -1201,11 +1319,12 @@ async function sendCreatorMsg() {
 
 // ── ADMIN HOME ──
 async function loadAdminHome() {
-  const [{ data: cams }, { data: creators }, { data: ms }, { data: paidMs }] = await Promise.all([
+  const [{ data: cams }, { data: creators }, { data: ms }, { data: paidMs }, { data: approvedMs }] = await Promise.all([
     sb.from('campaigns').select('id,artist_name,song_title,budget_remaining,budget_total,active'),
     sb.from('creators').select('id'),
     sb.from('milestones').select('*,creator_id,campaign_id').eq('status', 'väntar'),
-    sb.from('milestones').select('amount,status').in('status', ['godkänd', 'utbetald'])
+    sb.from('milestones').select('amount,status').in('status', ['godkänd', 'utbetald']),
+    sb.from('milestones').select('views').eq('status','godkänd')
   ])
   const active = cams ? cams.filter(c => c.active).length : 0
   document.getElementById('admin-stat-campaigns').textContent = active
@@ -1213,6 +1332,10 @@ async function loadAdminHome() {
   document.getElementById('admin-stat-pending').textContent = ms ? ms.length : 0
   const totalApproved = paidMs ? paidMs.reduce((s, m) => s + m.amount, 0) : 0
   document.getElementById('admin-stat-cut').textContent = Math.round(totalApproved * 0.1) + ' kr'
+  const avgViews = approvedMs && approvedMs.length > 0
+    ? Math.round(approvedMs.reduce((s, m) => s + (m.views || 0), 0) / approvedMs.length)
+    : 0
+  document.getElementById('admin-stat-avgviews').textContent = avgViews > 0 ? avgViews.toLocaleString('sv') : '–'
   if (ms && ms.length > 0) {
     const badge = document.getElementById('verify-badge')
     badge.style.display = 'inline'
@@ -1277,7 +1400,8 @@ async function createCampaign() {
     budget_total: budget, budget_remaining: budget,
     rate_per_1000: rate, max_per_creator: max,
     campaign_length: document.getElementById('camp-length').value,
-    requirements: document.getElementById('camp-req').value.trim()
+    requirements: document.getElementById('camp-req').value.trim(),
+    participation_type: document.getElementById('c-participation').value
   })
   if (error) { showToast('❌ ' + error.message); return }
   showToast('✅ Kampanj publicerad! Kreatörer kan nu se den.')
@@ -1338,12 +1462,14 @@ async function loadAdminCreators() {
 function renderCreators(data) {
   const tbody = document.getElementById('creators-tbody')
   if (!data || data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:36px;color:var(--sub);">Inga kreatörer registrerade ännu</td></tr>'
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:36px;color:var(--sub);">Inga kreatörer registrerade ännu</td></tr>'
     return
   }
   tbody.innerHTML = data.map(c => `<tr>
+    <td><input type="checkbox" class="creator-checkbox" data-id="${c.id}" onchange="updateSelectedCount()"></td>
     <td><div style="display:flex;align-items:center;gap:10px;"><div style="font-size:18px;">👤</div><div class="td-bold">${c.name}</div></div></td>
     <td class="td-muted">${c.tiktok_handle ? '@' + c.tiktok_handle : '–'}</td>
+    <td>${c.genre || '–'}</td>
     <td>${c.followers ? c.followers.toLocaleString('sv') : '–'}</td>
     <td>${c.price || 300} kr</td>
     <td class="td-muted">${new Date(c.created_at).toLocaleDateString('sv')}</td>
@@ -1352,8 +1478,16 @@ function renderCreators(data) {
 }
 
 function filterCreators(q) {
-  const filtered = allCreators.filter(c => c.name.toLowerCase().includes(q.toLowerCase()) || (c.tiktok_handle || '').toLowerCase().includes(q.toLowerCase()))
+  const query = (q !== undefined ? q : document.getElementById('deals-search')?.value || '').toLowerCase()
+  const genre = document.getElementById('genre-filter')?.value || ''
+  const filtered = allCreators.filter(c => {
+    const matchQ = !query || c.name.toLowerCase().includes(query) || (c.tiktok_handle||'').toLowerCase().includes(query)
+    const matchGenre = !genre || c.genre === genre
+    return matchQ && matchGenre
+  })
   renderCreators(filtered)
+  const countEl = document.getElementById('creators-count')
+  if (countEl) countEl.textContent = filtered.length + ' kreatörer'
 }
 
 // ── ADMIN CHAT ──
@@ -1406,7 +1540,7 @@ async function toggleCampaign(id, currentlyActive) {
 
 // ── ADMIN PAYOUTS ──
 async function loadAdminPayouts() {
-  const { data: allMs } = await sb.from('milestones').select('*, creators(name,email), campaigns(artist_name,song_title)').in('status', ['godkänd', 'utbetald']).order('created_at', { ascending: false })
+  const { data: allMs } = await sb.from('milestones').select('*, creators(name,email,frilans_finans_id), campaigns(artist_name,song_title)').in('status', ['godkänd', 'utbetald']).order('created_at', { ascending: false })
   const ms = allMs || []
   const paid = ms.filter(m => m.status === 'utbetald').reduce((s, m) => s + m.amount, 0)
   const approved = ms.filter(m => m.status === 'godkänd').reduce((s, m) => s + m.amount, 0)
@@ -1422,17 +1556,22 @@ async function loadAdminPayouts() {
     return
   }
   tableEl.innerHTML = `<div class="table-wrap"><table>
-    <thead><tr><th>Kreatör</th><th>Kampanj</th><th>Visningar</th><th>Belopp</th><th>Betalstatus</th><th></th></tr></thead>
+    <thead><tr><th>Kreatör</th><th>Kampanj</th><th>Visningar</th><th>Belopp</th><th>FF-ID</th><th>Betalstatus</th><th></th></tr></thead>
     <tbody id="payouts-tbody">${ms.map(m => {
       const name = m.creators?.name || '–'
       const email = m.creators?.email || ''
+      const ffId = m.creators?.frilans_finans_id
       const camp = m.campaigns ? m.campaigns.artist_name + ' — "' + m.campaigns.song_title + '"' : '–'
       const isPaid = m.status === 'utbetald'
+      const ffCell = ffId
+        ? `<div style="font-size:12px;font-weight:600;">${ffId}</div><a href="https://www.frilansfinans.se" target="_blank" style="font-size:11px;color:var(--brand);">Betala via FF →</a>`
+        : '<span style="color:var(--sub2);font-size:12px;">–</span>'
       return `<tr id="payout-row-${m.id}">
         <td><div class="td-bold">${name}</div><div class="td-muted" style="font-size:12px;">${email}</div></td>
         <td>${camp}</td>
         <td>${m.views.toLocaleString('sv')}</td>
         <td class="td-money">+${m.amount} kr</td>
+        <td>${ffCell}</td>
         <td>${isPaid ? '<span class="badge badge-active">💸 Utbetald</span>' : '<span class="badge badge-pending">⏳ Ej utbetald</span>'}</td>
         <td>${isPaid ? '' : `<button class="btn btn-success btn-sm" onclick="markAsPaid('${m.id}', '${name}', ${m.amount})">Markera utbetald</button>`}</td>
       </tr>`
@@ -1445,6 +1584,39 @@ async function markAsPaid(id, name, amount) {
   if (error) { showToast('❌ ' + error.message); return }
   showToast(`💸 ${amount} kr markerat som utbetalt till ${name}`)
   loadAdminPayouts()
+}
+
+// ── ADMIN INVITE ──
+function updateSelectedCount() {
+  selectedCreatorIds = [...document.querySelectorAll('.creator-checkbox:checked')].map(cb => cb.dataset.id)
+  const n = selectedCreatorIds.length
+  document.getElementById('selected-count').style.display = n > 0 ? 'inline' : 'none'
+  document.getElementById('selected-count').textContent = n + ' valda'
+  document.getElementById('invite-btn').style.display = n > 0 ? 'inline-flex' : 'none'
+}
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.creator-checkbox').forEach(cb => { cb.checked = checked })
+  updateSelectedCount()
+}
+async function openInviteModal() {
+  const { data: cams } = await sb.from('campaigns').select('id,artist_name,song_title').eq('active', true)
+  const sel = document.getElementById('invite-campaign')
+  sel.innerHTML = '<option value="">Välj kampanj...</option>' + (cams || []).map(c => `<option value="${c.id}">${c.artist_name} — "${c.song_title}"</option>`).join('')
+  document.getElementById('invite-msg').value = 'Vi har en kampanj som passar din TikTok-stil perfekt. Är du intresserad av att delta?'
+  openModal('modal-invite')
+}
+async function sendInvites() {
+  const campaignId = document.getElementById('invite-campaign').value
+  const message = document.getElementById('invite-msg').value.trim()
+  if (!campaignId) { showToast('❗ Välj en kampanj'); return }
+  if (!message) { showToast('❗ Skriv ett meddelande'); return }
+  const inserts = selectedCreatorIds.map(creatorId => ({ creator_id: creatorId, from_admin: true, text: message }))
+  const { error } = await sb.from('messages').insert(inserts)
+  if (error) { showToast('❌ ' + error.message); return }
+  showToast('✅ Erbjudande skickat till ' + selectedCreatorIds.length + ' kreatörer!')
+  closeModal('modal-invite')
+  document.querySelectorAll('.creator-checkbox').forEach(cb => cb.checked = false)
+  updateSelectedCount()
 }
 
 // ── UTILS ──
