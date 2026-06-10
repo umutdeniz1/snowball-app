@@ -373,7 +373,8 @@
       <!-- Logga in -->
       <div id="form-login">
         <div class="landing-form">
-          <input class="landing-input" id="login-email" type="email" placeholder="Din e-post" onkeypress="if(event.key==='Enter')doLogin()" />
+          <input class="landing-input" id="login-email" type="email" placeholder="Din e-post" />
+          <input class="landing-input" id="login-password" type="password" placeholder="Lösenord" onkeypress="if(event.key==='Enter')doLogin()" />
         </div>
         <button class="btn-enter" id="login-btn" onclick="doLogin()">Logga in →</button>
       </div>
@@ -383,6 +384,8 @@
           <input class="landing-input" id="reg-name" placeholder="Ditt namn" />
           <input class="landing-input" id="reg-email" type="email" placeholder="E-post" />
           <input class="landing-input" id="reg-tiktok" placeholder="TikTok @handle (valfritt)" />
+          <input class="landing-input" id="reg-password" type="password" placeholder="Välj lösenord" />
+          <input class="landing-input" id="reg-password2" type="password" placeholder="Bekräfta lösenord" onkeypress="if(event.key==='Enter')doRegister()" />
         </div>
         <button class="btn-enter" id="reg-btn" onclick="doRegister()">Skapa konto →</button>
       </div>
@@ -853,14 +856,23 @@ function switchTab(tab) {
   document.getElementById('tab-register').style.color = isLogin ? 'rgba(255,255,255,0.4)' : '#fff'
 }
 
+async function hashPw(pw) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw))
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('')
+}
+
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim()
+  const password = document.getElementById('login-password').value
   if (!email) { showToast('❗ Ange din e-post'); return }
+  if (!password) { showToast('❗ Ange ditt lösenord'); return }
   const btn = document.getElementById('login-btn')
   btn.disabled = true; btn.textContent = 'Loggar in...'
   const { data: existing } = await sb.from('creators').select('*').eq('email', email).maybeSingle()
   btn.disabled = false; btn.textContent = 'Logga in →'
   if (!existing) { showToast('❌ Inget konto hittades. Skapa ett konto istället.'); switchTab('register'); document.getElementById('reg-email').value = email; return }
+  const hash = await hashPw(password)
+  if (existing.password_hash && existing.password_hash !== hash) { showToast('❌ Fel lösenord'); return }
   currentCreator = existing
   launchCreatorApp()
 }
@@ -869,13 +881,19 @@ async function doRegister() {
   const name = document.getElementById('reg-name').value.trim()
   const email = document.getElementById('reg-email').value.trim()
   const tiktok = document.getElementById('reg-tiktok').value.trim()
+  const pw = document.getElementById('reg-password').value
+  const pw2 = document.getElementById('reg-password2').value
   if (!name) { showToast('❗ Ange ditt namn'); return }
   if (!email) { showToast('❗ Ange din e-post'); return }
+  if (!pw) { showToast('❗ Välj ett lösenord'); return }
+  if (pw !== pw2) { showToast('❌ Lösenorden matchar inte'); return }
+  if (pw.length < 6) { showToast('❗ Lösenordet måste vara minst 6 tecken'); return }
   const btn = document.getElementById('reg-btn')
   btn.disabled = true; btn.textContent = 'Skapar konto...'
   const { data: existing } = await sb.from('creators').select('*').eq('email', email).maybeSingle()
-  if (existing) { btn.disabled = false; btn.textContent = 'Skapa konto →'; showToast('✅ Konto finns redan! Loggar in...'); currentCreator = existing; launchCreatorApp(); return }
-  const { data, error } = await sb.from('creators').insert({ name, email, tiktok_handle: tiktok || null }).select().single()
+  if (existing) { btn.disabled = false; btn.textContent = 'Skapa konto →'; showToast('✅ Konto finns redan! Logga in istället.'); switchTab('login'); document.getElementById('login-email').value = email; return }
+  const password_hash = await hashPw(pw)
+  const { data, error } = await sb.from('creators').insert({ name, email, tiktok_handle: tiktok || null, password_hash }).select().single()
   btn.disabled = false; btn.textContent = 'Skapa konto →'
   if (error) { showToast('❌ ' + error.message); return }
   currentCreator = data
